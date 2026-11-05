@@ -2,541 +2,2956 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Remesa BCP - Conteo Dinámico por Fajos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <title>Sistema Ágil Unificado - Operaciones y Control 280 BCP</title>
     <style>
-        /* VARIABLES DE COLOR BCP Y COLORES NEÓN PARA LOS FAJOS */
         :root {
             --bcp-blue: #002A8D;
-            --bcp-orange: #FF7900;
-            --bg-color: #f4f6f9;
-            --text-main: #1e293b;
-            --card-bg: #ffffff;
+            --bcp-blue-dark: #001B5E;
+            --bcp-orange: #FF6A00;
+            --bg-light: #F4F6F9;
+            --card-bg: #FFFFFF;
+            --text-dark: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --danger-color: #DC2626;
+            --app-bg: #F1F5F9;
+
+            /* 1. MODO SERVICIO */
+            --recibo-header: #eab308;
+            --recibo-header-text: #000000;
+            --recibo-caja-bg: #fef9c3;
+            --recibo-caja-border: #facc15;
+
+            /* 2. MODO DEPÓSITO */
+            --deposito-header: #0d9488;
+            --deposito-header-text: #ffffff;
+            --deposito-caja-bg: #ccfbf1;
+            --deposito-caja-border: #2dd4bf;
+
+            /* 3. MODO RETIRO */
+            --retiro-header: #e11d48;
+            --retiro-header-text: #ffffff;
+            --retiro-caja-bg: #ffe4e6;
+            --retiro-caja-border: #fb7185;
+
+            /* 4. MODO YAPE */
+            --yape-header: #7e22ce;
+            --yape-header-text: #ffffff;
+            --yape-caja-bg: #f3e8ff;
+            --yape-caja-border: #c084fc;
         }
 
-        body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            margin: 0; 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            padding-bottom: 20px;
-            user-select: none;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* NAVEGACIÓN */
-        .tab-container {
-            display: flex;
-            background: var(--card-bg);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: sticky;
+        /* BLINDAJE VERTICAL COMPLETO: CERO SCROLL ARRIBA/ABAJO */
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden !important;
+            position: fixed;
             top: 0;
-            z-index: 100;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overscroll-behavior: none !important;
+            touch-action: pan-x !important;
+            background-color: var(--app-bg);
+            color: var(--text-dark);
+            font-variant-numeric: tabular-nums;
         }
 
-        .tab-btn {
-            flex: 1;
-            padding: 16px 0;
-            text-align: center;
-            font-size: 16px;
-            font-weight: 800;
-            color: #64748b;
-            background: none;
-            border: none;
-            border-bottom: 4px solid transparent;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .tab-btn.active {
-            color: var(--bcp-blue);
-            border-bottom: 4px solid var(--bcp-orange);
-            background-color: #f8fafc;
-        }
-
-        .tab-content {
+        .main-app-container {
             display: none;
-            padding: 15px;
-            animation: fadeIn 0.25s ease;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: hidden;
+            animation: fadeInScreen 0.14s ease-out forwards;
         }
 
-        .tab-content.active {
+        .main-app-container.active-app {
             display: block;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes fadeInScreen {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        /* PESTAÑA TOTAL */
-        .resumen-container {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 2px solid var(--bcp-blue);
+        .caja-wrapper, .cierre-wrapper {
+            padding: 2px 4px 6px 4px;
+            height: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            overflow-y: hidden;
+        }
+
+        /* =========================================
+           BARRA LIMPIA DE INVOCACIÓN DE PERSONA (BASE DE DATOS)
+           ========================================= */
+        .cliente-invocador-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 9px;
+            padding: 3px 6px;
+            margin-bottom: 4px;
+            gap: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            height: 40px;
+        }
+
+        .select-cliente-clean {
+            flex: 1;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--bcp-blue);
+            outline: none;
+            cursor: pointer;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .dni-badge-clean {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.4px;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .dni-badge-clean:active { transform: scale(0.95); }
+        .dni-digito-verificador { color: #facc15; }
+
+        .btn-add-cliente-mini {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            background: #f8fafc;
+            color: var(--bcp-blue);
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-add-cliente-mini:active { transform: scale(0.92); }
+
+        /* =========================================
+           PANELES DE CABECERA Y CAJAS NUMÉRICAS
+           ========================================= */
+        .panel-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px 4px 6px;
+            border-radius: 9px 9px 0 0;
+            font-size: 15px;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+            user-select: none;
+            gap: 6px;
+        }
+
+        .panel-title-area {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        .panel-title-area span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.2px;
+        }
+
+        .header-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.14);
+            padding: 2.5px 6px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .h-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+        }
+        .tema-recibo-header .h-dot {
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+        .h-dot.active {
+            background-color: #ffffff !important;
+            transform: scale(1.25);
+        }
+        .tema-recibo-header .h-dot.active {
+            background-color: #000000 !important;
+        }
+        .h-dot.has-data:not(.active) {
+            background-color: #ff6a00 !important;
+            box-shadow: 0 0 5px #ff6a00;
+        }
+
+        .panel-total > span:last-child {
+            font-size: clamp(22px, 6vw, 28px);
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-align: right;
+        }
+
+        .tema-recibo-header { background: var(--recibo-header) !important; color: var(--recibo-header-text) !important; }
+        .tema-deposito-header { background: var(--deposito-header) !important; color: var(--deposito-header-text) !important; }
+        .tema-retiro-header { background: var(--retiro-header) !important; color: var(--retiro-header-text) !important; }
+        .tema-yape-header { background: var(--yape-header) !important; color: var(--yape-header-text) !important; }
+
+        .caja-contenedor {
+            padding: 5px;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 5px;
+            border-bottom: 3px solid;
+            border-left: 2px solid;
+            border-right: 2px solid;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
             position: relative;
         }
 
-        .resumen-row {
+        .caja-contenedor.tema-recibo-bg { background-color: var(--recibo-caja-bg); border-color: var(--recibo-caja-border); }
+        .caja-contenedor.tema-deposito-bg { background-color: var(--deposito-caja-bg); border-color: var(--deposito-caja-border); }
+        .caja-contenedor.tema-retiro-bg { background-color: var(--retiro-caja-bg); border-color: var(--retiro-caja-border); }
+        .caja-contenedor.tema-yape-bg { background-color: var(--yape-caja-bg); border-color: var(--yape-caja-border); }
+
+        .contenedor-deslizable {
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            gap: 8px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 1px 0;
+            touch-action: pan-x;
+        }
+        .contenedor-deslizable::-webkit-scrollbar { display: none; }
+
+        .pagina-deslizable {
+            flex: 0 0 100%;
+            scroll-snap-align: start;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .badge-pagina-dos {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: 900;
+            padding: 1.5px 8px;
+            border-radius: 3px;
+            letter-spacing: 0.8px;
+            pointer-events: none;
+            z-index: 5;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+        .fila-extra-expandible {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .fila-extra-expandible.activa {
+            display: grid;
+        }
+
+        .caja-contenedor input {
+            width: 100%;
+            height: 46px;
+            font-size: clamp(22px, 6.6vw, 28px);
+            font-weight: 900;
+            border: 2px solid #94a3b8;
+            border-radius: 7px;
+            box-sizing: border-box;
+            text-align: center;
+            color: #0f172a;
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            transition: height 0.12s ease;
+        }
+        .caja-contenedor.bloque-con-6 input {
+            height: 40px;
+            font-size: clamp(21px, 6.2vw, 26px);
+        }
+        .caja-contenedor input:not(:placeholder-shown) {
+            border-color: #334155;
+        }
+        .caja-contenedor input:focus {
+            outline: none;
+            border-color: var(--bcp-orange);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.22);
+        }
+        .caja-contenedor input::placeholder {
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: normal;
+        }
+
+        /* ===============================================================
+           PANEL DE RESULTADO SOBRIO Y PROFESIONAL
+           =============================================================== */
+        .panel-resultado {
+            padding: 0 6px 6px 6px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+            background-color: #ffffff;
+            border: 2.5px solid #cbd5e1;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge-operacion {
+            display: inline-block;
+            padding: 1.5px 10px;
+            border-radius: 0 0 6px 6px;
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 3px;
+            background: #f1f5f9;
+            color: #475569;
+            line-height: 1.2;
+        }
+
+        .texto-final-expresivo {
+            font-size: clamp(15px, 4.5vw, 19px);
+            font-weight: 900;
+            letter-spacing: 0.4px;
+            line-height: 1.15;
+            text-transform: uppercase;
+            margin: 2px auto;
+            padding: 4px 10px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            text-align: center;
+            width: 100%;
+        }
+
+        #panelFinalCierre .texto-final-expresivo {
+            margin-top: 6px;
+        }
+
+        .sig-wing {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(16px, 4.2vw, 20px);
+            height: clamp(16px, 4.2vw, 20px);
+            flex-shrink: 0;
+        }
+        .sig-wing svg { width: 100%; height: 100%; display: block; }
+
+        .monto-final {
+            display: block;
+            width: 100%;
+            text-align: center;
+            font-size: clamp(42px, 12vw, 56px);
+            font-weight: 900;
+            margin-top: 1px;
+            line-height: 0.95;
+            letter-spacing: -2px;
+        }
+
+        .estado-esperando { background-color: #ffffff; border-color: #cbd5e1; color: #475569; }
+        .estado-esperando .texto-final-expresivo { background-color: #f1f5f9; color: #475569; }
+
+        .estado-proceso { background-color: #ffffff; border-color: #7e22ce; color: #581c87; }
+        .estado-proceso .texto-final-expresivo { background-color: #7e22ce; color: #ffffff; }
+
+        .estado-cobrar { background-color: #ffffff; border-color: #d97706; color: #b45309; }
+        .estado-cobrar .texto-final-expresivo { background-color: #d97706; color: #ffffff; }
+
+        .estado-vuelto { background-color: #ffffff; border-color: #0284c7; color: #0369a1; }
+        .estado-vuelto .texto-final-expresivo { background-color: #0284c7; color: #ffffff; }
+
+        .estado-faltante { background-color: #ffffff; border-color: #dc2626 !important; color: #dc2626 !important; }
+        .estado-faltante .texto-final-expresivo { background-color: #dc2626 !important; color: #ffffff !important; }
+
+        .estado-exacto { background-color: #ffffff; border-color: #16a34a; color: #15803d; }
+        .estado-exacto .texto-final-expresivo { background-color: #16a34a; color: #ffffff; }
+
+        .estado-retiro { background-color: #ffffff; border-color: var(--retiro-header); color: #be123c; }
+        .estado-retiro .texto-final-expresivo { background-color: var(--retiro-header); color: #ffffff; }
+
+        .estado-deposito { background-color: #ffffff; border-color: var(--deposito-header); color: #0f766e; }
+        .estado-deposito .texto-final-expresivo { background-color: var(--deposito-header); color: #ffffff; }
+
+        /* =========================================
+           SELECTOR DE MODOS DE OPERACIÓN
+           ========================================= */
+        .selector-modos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 0;
+        }
+
+        .btn-modo-operacion {
+            height: 43px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: manipulation;
+            position: relative;
+        }
+        .btn-modo-operacion:active { transform: scale(0.97); }
+
+        .btn-modo-operacion.tiene-cola-pendiente::after {
+            content: "";
+            position: absolute;
+            top: 4px;
+            right: 5px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #ff6a00;
+            box-shadow: 0 0 0 2px #ffffff;
+        }
+
+        #btn-modo-deposito { background-color: #e6fffa; color: #0d9488; border-color: #99f6e4; }
+        #btn-modo-deposito.active-modo { background: #0d9488 !important; color: #ffffff !important; border-color: #0f766e !important; }
+
+        #btn-modo-servicio { background-color: #fefce8; color: #a16207; border-color: #fef08a; }
+        #btn-modo-servicio.active-modo { background: #eab308 !important; color: #000000 !important; border-color: #ca8a04 !important; }
+
+        #btn-modo-retiro { background-color: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+        #btn-modo-retiro.active-modo { background: #e11d48 !important; color: #ffffff !important; border-color: #be123c !important; }
+
+        #btn-modo-yape { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+        #btn-modo-yape.active-modo { background: #7e22ce !important; color: #ffffff !important; border-color: #581c87 !important; }
+
+        /* ===============================================================
+           3 BOTONES ESTÁTICOS REUBICABLES: "BORRAR", "MOVIMIENTOS", "ANULAR"
+           =============================================================== */
+        .btn-aux-caja-fijo {
+            position: fixed;
+            bottom: auto !important;
+            height: 43px;
+            width: calc((min(100vw, 520px) - 18px) / 3);
+            border-radius: 7px;
+            font-size: 11.5px;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            user-select: none;
+            z-index: 940;
+            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
+            touch-action: none;
+        }
+        .btn-aux-caja-fijo svg { width: 14px; height: 14px; flex-shrink: 0; pointer-events: none; }
+        .btn-aux-caja-fijo:active { transform: scale(0.96); }
+        .btn-aux-caja-fijo.modo-reubicacion {
+            box-shadow: 0 0 0 3px var(--bcp-orange), 0 8px 18px rgba(0,0,0,0.25) !important;
+            transform: scale(1.04);
+            z-index: 990;
+        }
+        .btn-aux-caja-fijo.oculto { display: none !important; }
+        .btn-aux-caja-fijo.tapado-por-teclado {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        #btnCajaBorrar { background-color: #e2e8f0; color: #1e293b; border: 2px solid #94a3b8; }
+        #btnCajaBorrar.confirmado { background-color: #334155 !important; color: #ffffff !important; border-color: #0f172a !important; }
+
+        #btnCajaMovimientos { background-color: #dbeafe; color: #1e3a8a; border: 2px solid #60a5fa; }
+        #btnCajaMovimientos:active { background-color: #bfdbfe; }
+
+        #btnCajaAnular { background-color: #e0e7ff; color: #1e1b4b; border: 2px solid #6366f1; }
+        #btnCajaAnular.confirmado { background-color: #312e81 !important; color: #ffffff !important; border-color: #1e1b4b !important; }
+
+        /* ===============================================================
+           CONMUTADOR CIRCULAR FLOTANTE 2D
+           =============================================================== */
+        .google-account-switcher {
+            position: fixed;
+            top: 505px;
+            left: 50%;
+            bottom: auto !important;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            padding: 2.5px;
+            background: conic-gradient(from 45deg, #FF6A00 0deg, #FF6A00 110deg, #002A8D 110deg, #002A8D 260deg, #0d9488 260deg, #eab308 360deg);
+            box-shadow: 0 3px 10px rgba(0, 42, 141, 0.28), 0 1px 3px rgba(0,0,0,0.18);
+            border: none;
+            cursor: pointer;
+            user-select: none;
+            z-index: 950;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .google-account-switcher:active { transform: translate(-50%, -50%) scale(0.91); }
+        .google-account-switcher.oculto { display: none !important; }
+        .google-account-switcher.tapado-por-teclado {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        .switcher-inner-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--bcp-blue);
+        }
+        .google-account-switcher.modo-cierre-activo .switcher-inner-circle {
+            background: var(--bcp-blue);
+            color: #ffffff;
+        }
+        .switcher-icon-svg { width: 18px; height: 18px; display: block; transition: transform 0.25s ease; }
+        .google-account-switcher.rotando .switcher-icon-svg { transform: rotate(180deg); }
+        .switcher-mini-label { font-size: 7.5px; font-weight: 900; letter-spacing: 0.4px; line-height: 1; margin-top: 1px; text-transform: uppercase; }
+
+        /* =========================================================
+           PANTALLA 2: CONTROL DE META 280 (ESTILO CIERRE DE CAJA LIMPIO)
+           ========================================================= */
+        .top-bar-cierre {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px dashed #cbd5e1;
+            background: var(--bcp-blue);
+            color: #ffffff;
+            padding: 5px 8px 5px 10px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            box-shadow: 0 2px 6px rgba(0, 42, 141, 0.18);
+            user-select: none;
         }
-        .resumen-row:last-child { border-bottom: none; }
+        .top-bar-title { font-size: 13px; font-weight: 900; letter-spacing: 0.4px; text-transform: uppercase; }
+        .top-bar-actions { display: flex; align-items: center; gap: 5px; }
 
-        .resumen-left {
+        .btn-ir-efectivo {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            border-radius: 7px;
+            padding: 4px 8px;
+            font-size: 10.5px;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            cursor: pointer;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 4px;
         }
+        .btn-ir-efectivo:active { transform: scale(0.95); }
 
-        .resumen-denom { font-size: 24px; font-weight: 900; color: var(--text-main); }
+        .summary-box {
+            background: #ffffff;
+            border: 2px solid var(--bcp-blue);
+            border-radius: 11px;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        }
 
-        /* ESTILOS DEL CONTADOR DE BILLETES (INACTIVO) */
-        .resumen-qty {
-            font-size: 18px;
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 35px;
+            margin-bottom: 4px;
+        }
+        .summary-row.row-total-es {
+            margin-bottom: 0;
+            border-top: 2px dashed #cbd5e1;
+            padding-top: 4px;
+            min-height: 33px;
+        }
+
+        .summary-label {
+            font-size: 12.5px;
             font-weight: 900;
-            color: #94a3b8;
-            background: #f1f5f9;
-            padding: 2px 10px;
-            border-radius: 6px;
-            align-self: flex-start;
-            transition: all 0.3s ease;
-        }
-
-        /* DINÁMICA DE COLORES POR LOTES/FAJOS */
-        .resumen-qty.lote-1 { background-color: #ccff00; color: #000; box-shadow: 0 0 8px rgba(204, 255, 0, 0.6); }
-        .resumen-qty.lote-2 { background-color: #ff9900; color: #000; box-shadow: 0 0 8px rgba(255, 153, 0, 0.6); }
-        .resumen-qty.lote-3 { background-color: #00e5ff; color: #000; box-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
-        .resumen-qty.lote-4 { background-color: #ff00ff; color: #fff; box-shadow: 0 0 8px rgba(255, 0, 255, 0.6); }
-
-        .resumen-subtotal { font-size: 22px; font-weight: 700; color: var(--text-main); }
-
-        .gran-total-box {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 3px solid var(--text-main);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .gran-total-label { font-size: 24px; font-weight: 900; }
-        .gran-total-monto { font-size: 28px; font-weight: 900; color: var(--bcp-blue); }
-
-        .leyenda-colores {
-            font-size: 11px;
-            color: #64748b;
-            text-align: center;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-
-        /* PESTAÑA BILLETES */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
-            border: 1px solid #e2e8f0;
-        }
-
-        .card-denom { font-size: 22px; font-weight: 900; color: var(--bcp-blue); width: 70px; }
-
-        .controls {
+            color: #1e293b;
+            letter-spacing: 0.2px;
             display: flex;
             align-items: center;
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 4px;
-            border: 1px solid #cbd5e1;
-            width: 140px;
-            justify-content: space-between;
+            gap: 5px;
         }
 
-        .btn-control {
-            background: white;
-            border: 1px solid #cbd5e1;
-            font-size: 24px;
-            font-weight: 700;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            border-radius: 6px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .btn-control:active { background: #e2e8f0; }
-
-        .input-qty {
-            width: 50px;
-            text-align: center;
-            font-size: 20px;
+        .badge-touch-hint {
+            font-size: 9px;
             font-weight: 800;
-            border: none;
-            background: transparent;
-            outline: none;
-            color: #000;
+            color: var(--bcp-blue);
+            background: #e0e7ff;
+            padding: 1.5px 6px;
+            border-radius: 5px;
         }
 
-        .btn-save {
-            background-color: var(--bcp-blue);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            height: 48px;
-            padding: 0 15px;
+        .valor-sincronizado-continuo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            min-width: 135px;
+            height: 33px;
+            padding: 0 9px;
+            border-radius: 7px;
+            border: 2.5px solid #0284c7;
+            background-color: #f0f9ff;
+            color: #0369a1;
+            font-size: clamp(18px, 5.2vw, 22px);
+            font-weight: 900;
+        }
+
+        .input-sistema {
+            width: 135px;
+            height: 34px;
+            font-size: clamp(18px, 5.2vw, 22px);
+            font-weight: 900;
+            text-align: right;
+            border: 2px solid #94a3b8;
+            background: #f8fafc;
+            color: #0f172a;
+            border-radius: 7px;
+            padding: 0 9px;
+            outline: none;
+        }
+        .input-sistema:not(:placeholder-shown) { background: #ffffff; border-color: #334155; }
+        .input-sistema:focus { border-color: var(--bcp-orange); background: #ffffff; box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.22); }
+
+        .summary-value.val-es {
+            color: var(--bcp-blue);
+            font-size: clamp(20px, 5.8vw, 25px);
+            font-weight: 900;
+        }
+
+        .capital-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            padding: 0 4px;
+            user-select: none;
+        }
+        .capital-label { font-weight: 800; color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+        .capital-display-pill {
             font-size: 14px;
-            font-weight: 700;
+            font-weight: 900;
+            color: #334155;
+            border-bottom: 2px dotted #94a3b8;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,42,141,0.3);
-            transition: 0.2s;
+        }
+
+        .cierre-reset-zone {
+            margin-top: 6px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .btn-borrar-todo-cierre {
+            width: 100%;
+            height: 38px;
+            border-radius: 9px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-borrar-todo-cierre:active { transform: scale(0.97); }
+
+        /* =========================================================
+           PANTALLA 3: HOJAS (MOVIMIENTOS + DASHBOARD MES + BASE DE DATOS)
+           ========================================================= */
+        .hojas-wrapper {
+            background-color: var(--bg-light);
+            height: 100%;
+            max-width: 520px;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .top-bar-hojas {
+            background: var(--bcp-blue);
+            color: #ffffff;
+            padding: 7px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0, 42, 141, 0.2);
+            z-index: 1010;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .btn-top-hojas {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            color: #ffffff;
+            border-radius: 7px;
+            height: 32px;
+            padding: 0 10px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            line-height: 1.1;
+            gap: 4px;
         }
-        .btn-save:active { transform: scale(0.95); background-color: var(--bcp-orange); }
-        .btn-save.success { background-color: #10b981; }
+        .btn-top-hojas:active { transform: scale(0.95); }
+        .btn-top-hojas.btn-excel-top { background: #16a34a; border-color: #22c55e; }
+        .btn-top-hojas.btn-borrar-top { background: rgba(220, 38, 38, 0.25); border-color: rgba(252, 165, 165, 0.45); }
 
-        .action-bar { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
-        .btn-global { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border-radius: 8px; cursor: pointer; border: none; text-align: center; }
-
-        .btn-borrar-input { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-        .btn-borrar-input:active { background: #e2e8f0; }
-
-        .btn-guardar-todo { background: var(--bcp-orange); color: white; box-shadow: 0 2px 4px rgba(255,121,0,0.3); }
-        .btn-guardar-todo:active { transform: scale(0.98); }
-
-        /* BOTÓN DE ENVÍO A GOOGLE SHEETS */
-        .btn-enviar-sheets { 
-            background-color: #10b981; 
-            color: white; 
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); 
-            margin-top: 15px; 
-            width: 100%; 
-            font-size: 16px;
-            transition: 0.2s;
+        .tabs-hojas-bar {
+            background: #ffffff;
+            display: flex;
+            border-bottom: 1.5px solid #cbd5e1;
+            flex-shrink: 0;
+            user-select: none;
         }
-        .btn-enviar-sheets:active { transform: scale(0.98); background-color: #059669; }
+        .btn-tab-hoja {
+            flex: 1;
+            padding: 8px 4px;
+            background: none;
+            border: none;
+            border-bottom: 3.5px solid transparent;
+            font-size: 11.5px;
+            font-weight: 900;
+            color: #64748b;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-tab-hoja.active {
+            color: var(--bcp-blue);
+            background-color: #eff6ff;
+            border-bottom-color: var(--bcp-orange);
+        }
 
-        .btn-peligro { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; margin-top: 12px; width: 100%; transition: 0.2s; }
-        .btn-peligro:active { background: #f87171; color: white; transform: scale(0.98); }
+        .badge-contador-op {
+            font-size: 10.5px;
+            font-weight: 900;
+            background: var(--bcp-blue);
+            color: #ffffff;
+            padding: 1.5px 6px;
+            border-radius: 10px;
+        }
 
+        .hojas-slider {
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            width: 100%;
+            flex: 1;
+            touch-action: pan-x;
+        }
+        .hojas-slider::-webkit-scrollbar { display: none; }
+
+        .hoja-page-view {
+            flex: 0 0 100%;
+            min-width: 100%;
+            height: 100%;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            overflow: hidden;
+        }
+
+        .hoja1-saldos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .card-saldo-hoja1 {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 5px 10px;
+        }
+        .card-saldo-hoja1.card-efectivo-actual { border-color: var(--bcp-blue); background: #f0f9ff; }
+        .lbl-saldo-hoja1 { font-size: 10px; font-weight: 900; color: #475569; text-transform: uppercase; }
+        .val-saldo-hoja1 { font-size: clamp(18px, 5vw, 22px); font-weight: 900; color: #0f172a; margin-top: 1px; }
+
+        .tabla-movs-card {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 11px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .tabla-movs-header {
+            display: grid;
+            grid-template-columns: 44px 58px 1fr 88px;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 7px 8px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .tabla-mes-header {
+            display: grid;
+            grid-template-columns: 68px 50px 50px 52px 58px 1fr;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 7px 6px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .tabla-movs-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            touch-action: pan-y !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .fila-mov-item {
+            display: grid;
+            grid-template-columns: 44px 58px 1fr 88px;
+            align-items: center;
+            padding: 7px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12.5px;
+        }
+        .fila-mes-item {
+            display: grid;
+            grid-template-columns: 68px 50px 50px 52px 58px 1fr;
+            align-items: center;
+            padding: 7px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12px;
+            font-weight: 800;
+            text-align: center;
+        }
+        .mov-col-num {
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--bcp-blue);
+            background: #e0e7ff;
+            padding: 2px 5px;
+            border-radius: 5px;
+            width: fit-content;
+        }
+
+        /* MODALES LIMPIOS */
+        .modal-config {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            z-index: 2000;
+            padding: 14px;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-config.active { display: flex; }
+        .modal-card {
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 88vh;
+            overflow-y: auto;
+            padding: 15px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            touch-action: pan-y !important;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        .modal-header h3 { font-size: 14px; font-weight: 900; color: var(--bcp-blue); text-transform: uppercase; }
+        .btn-close-modal {
+            background: #f1f5f9; border: none; width: 30px; height: 30px;
+            border-radius: 50%; font-size: 16px; font-weight: 900; cursor: pointer;
+        }
+        .form-group-modal { margin-bottom: 9px; }
+        .form-group-modal label {
+            display: block; font-size: 10.5px; font-weight: 900; color: #334155;
+            text-transform: uppercase; margin-bottom: 3px;
+        }
+        .input-modal-std {
+            width: 100%; height: 40px; border: 2px solid #cbd5e1; border-radius: 8px;
+            padding: 0 10px; font-size: 15px; font-weight: 800; color: #0f172a; outline: none;
+        }
+        .input-modal-std:focus { border-color: var(--bcp-orange); }
     </style>
 </head>
 <body>
 
-    <!-- NAVEGACIÓN -->
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="openTab(event, 'Total')">📋 TOTAL</button>
-        <button class="tab-btn" onclick="openTab(event, 'Billetes')">💵 BILLETES</button>
+    <!-- =========================================================
+         PANTALLA 1: REGISTRO DE OPERACIONES (100% LIMPIA Y MANUAL)
+         ========================================================= -->
+    <div id="app-caja" class="main-app-container active-app">
+        <form id="formCaja" onsubmit="ejecutarAccionTecladoCaja(event)" action="javascript:void(0);">
+            <button type="submit" style="display:none;" aria-hidden="true"></button>
+            <div class="caja-wrapper">
+
+                <!-- BARRA COMPACTA DE PERSONA (INVOCACIÓN DIRECTA POR NOMBRE + DNI 8+1 VERIFICADOR) -->
+                <div class="cliente-invocador-bar">
+                    <select id="selectClienteActivo" class="select-cliente-clean" onchange="cambiarClienteSeleccionado(this.value)"></select>
+                    <div class="dni-badge-clean" onclick="copiarDniClienteActivo()" title="Toca para copiar DNI">
+                        <span>DNI:</span>
+                        <span id="lblDniClienteActivo">--------</span>
+                    </div>
+                    <button type="button" class="btn-add-cliente-mini" onpointerdown="event.preventDefault()" onclick="abrirModalPersona()" title="Registrar nueva persona">+</button>
+                </div>
+
+                <!-- CABECERA DEL BLOQUE DE MONTOS MANUALES -->
+                <div class="panel-total tema-deposito-header" id="panelSuperior">
+                    <div class="panel-title-area">
+                        <span id="lblTituloSuperior">MONTOS DE DEPÓSITO</span>
+                        <div class="header-dots">
+                            <div class="h-dot active" id="dot-sup-1" onclick="scrollPaginacionDirecta('swipeMontos', 1)"></div>
+                            <div class="h-dot" id="dot-sup-2" onclick="scrollPaginacionDirecta('swipeMontos', 2)"></div>
+                        </div>
+                    </div>
+                    <span id="lblTotalMontos">0.00</span>
+                </div>
+
+                <!-- CUADRÍCULA MANUAL DE MONTOS (CADA CUADRO LLENO = 1 OPERACIÓN AL DAR ENTER) -->
+                <div class="caja-contenedor tema-deposito-bg" id="cajaSuperiorContenedor">
+                    <div class="contenedor-deslizable" id="swipeMontos" onscroll="handleScrollIndicators('swipeMontos', 'dot-sup-1', 'dot-sup-2')">
+                        <!-- PÁGINA 1: 4 cuadros base + 2 cuadros expandibles (b5, b6) -->
+                        <div class="pagina-deslizable">
+                            <div class="grid-2">
+                                <input type="text" id="b1" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b2" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b3" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b4" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                            </div>
+                            <div class="fila-extra-expandible" id="filaExtraSup">
+                                <input type="text" id="b5" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b6" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                            </div>
+                        </div>
+                        <!-- PÁGINA 2: 4 cuadros adicionales (b7, b8, b9, b10) -->
+                        <div class="pagina-deslizable">
+                            <div class="grid-2">
+                                <input type="text" id="b7" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b8" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b9" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                                <input type="text" id="b10" inputmode="decimal" enterkeyhint="send" onfocus="registrarFocoCaja(this)" oninput="handleInput(this)" placeholder="0.00">
+                            </div>
+                            <span class="badge-pagina-dos">PÁG. 2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL DE RESULTADO SOBRIO -->
+                <div class="panel-resultado estado-esperando" id="panelFinal">
+                    <div class="badge-operacion" id="badgeOperacion">DEPÓSITO EN CUENTA</div>
+                    <div class="texto-final-expresivo" id="textoFinal">ESPERANDO MONTOS...</div>
+                    <span class="monto-final" id="montoFinal">0.00</span>
+                </div>
+
+                <!-- SELECTOR DE MODOS DE OPERACIÓN -->
+                <div class="selector-modos-grid" id="gridSelectorModos">
+                    <button type="button" class="btn-modo-operacion active-modo" id="btn-modo-deposito" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="seleccionarModoDirecto(event, 'deposito')">
+                        DEPÓSITO
+                    </button>
+                    <button type="button" class="btn-modo-operacion" id="btn-modo-servicio" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="seleccionarModoDirecto(event, 'recibo')">
+                        SERVICIO
+                    </button>
+                    <button type="button" class="btn-modo-operacion" id="btn-modo-retiro" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="seleccionarModoDirecto(event, 'retiro')">
+                        RETIRO
+                    </button>
+                    <button type="button" class="btn-modo-operacion" id="btn-modo-yape" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="seleccionarModoDirecto(event, 'yape')">
+                        YAPE
+                    </button>
+                </div>
+
+            </div>
+        </form>
     </div>
 
-    <!-- PESTAÑA: TOTAL -->
-    <div id="Total" class="tab-content active">
-        <div class="resumen-container">
+    <!-- =========================================================
+         3 BOTONES ESTÁTICOS REUBICABLES DE CAJA: "BORRAR", "MOVIMIENTOS", "ANULAR"
+         ========================================================= -->
+    <button type="button" id="btnCajaBorrar" class="btn-aux-caja-fijo" title="Toque: Borrar montos · Mantener presionado: Mover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+        </svg>
+        <span id="txtBtnCajaBorrar">BORRAR</span>
+    </button>
 
-            <div class="resumen-row">
-                <div class="resumen-left">
-                    <span class="resumen-denom">S/ 200</span>
-                    <span class="resumen-qty" id="tot-qty-b200">0</span>
+    <button type="button" id="btnCajaMovimientos" class="btn-aux-caja-fijo" title="Toque: Abrir Historial y Dashboard · Mantener presionado: Mover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
+        </svg>
+        <span id="txtBtnCajaMovimientos">MOVIMIENTOS</span>
+    </button>
+
+    <button type="button" id="btnCajaAnular" class="btn-aux-caja-fijo" title="Toque: Anular última operación · Mantener presionado: Mover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+        </svg>
+        <span id="txtBtnCajaAnular">ANULAR</span>
+    </button>
+
+    <!-- =========================================================
+         PANTALLA 2: CONTROL DE META 280 Y BASE DE DATOS (SEPARADA EN EL CONMUTADOR 2D)
+         ========================================================= -->
+    <div id="app-cierre" class="main-app-container">
+        <form id="formCierre" onsubmit="ejecutarGuardadoTurnosConEnter(event)" action="javascript:void(0);">
+            <button type="submit" style="display:none;" aria-hidden="true"></button>
+            <div class="cierre-wrapper">
+
+                <div class="top-bar-cierre">
+                    <div class="top-bar-title">📋 CONTROL META 280</div>
+                    <div class="top-bar-actions">
+                        <button type="button" class="btn-ir-efectivo" onpointerdown="event.preventDefault()" onclick="abrirModalPersona()">
+                            <span>👤 + PERSONA</span>
+                        </button>
+                        <button type="button" class="btn-ir-efectivo" onpointerdown="event.preventDefault()" onclick="abrirPantallaHojas(2)">
+                            <span>📊 HOJAS</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="resumen-subtotal" id="tot-sub-b200">0.00</div>
-            </div>
 
-            <div class="resumen-row">
-                <div class="resumen-left">
-                    <span class="resumen-denom">S/ 100</span>
-                    <span class="resumen-qty" id="tot-qty-b100">0</span>
+                <!-- CUADRO RESUMEN DE OPERACIONES -->
+                <div class="summary-box">
+                    <div class="summary-row" onclick="abrirPantallaHojas(1)" style="cursor:pointer;">
+                        <span class="summary-label">
+                            <span>OP. REGISTRADAS</span>
+                            <span class="badge-touch-hint">Historial ⇄</span>
+                        </span>
+                        <span class="valor-sincronizado-continuo" id="display-op-clientes">0</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span class="summary-label">TURNO MAÑANA</span>
+                        <input type="text" id="input-turno-manana" class="input-sistema" inputmode="numeric" enterkeyhint="send" onfocus="registrarFocoCierre(this)" oninput="handleInputTurnos(this)" placeholder="0">
+                    </div>
+
+                    <div class="summary-row">
+                        <span class="summary-label">TURNO TARDE</span>
+                        <input type="text" id="input-turno-tarde" class="input-sistema" inputmode="numeric" enterkeyhint="send" onfocus="registrarFocoCierre(this)" oninput="handleInputTurnos(this)" placeholder="0">
+                    </div>
+
+                    <div class="summary-row row-total-es">
+                        <span class="summary-label">TOTAL OPERACIONES</span>
+                        <span class="summary-value val-es" id="display-total-operaciones">0</span>
+                    </div>
                 </div>
-                <div class="resumen-subtotal" id="tot-sub-b100">0.00</div>
-            </div>
 
-            <div class="resumen-row">
-                <div class="resumen-left">
-                    <span class="resumen-denom">S/ 50</span>
-                    <span class="resumen-qty" id="tot-qty-b50">0</span>
+                <!-- META DIARIA CONFIGURABLE -->
+                <div class="capital-row">
+                    <span class="capital-label">Meta Diaria</span>
+                    <span class="capital-display-pill" onclick="cambiarMetaDiariaPrompt()">
+                        <span id="lblMetaActiva">280</span> OP
+                    </span>
                 </div>
-                <div class="resumen-subtotal" id="tot-sub-b50">0.00</div>
-            </div>
 
-            <div class="resumen-row">
-                <div class="resumen-left">
-                    <span class="resumen-denom">S/ 20</span>
-                    <span class="resumen-qty" id="tot-qty-b20">0</span>
+                <!-- PANEL DE RESPUESTA SOBRIO -->
+                <div class="panel-resultado estado-esperando" id="panelFinalCierre">
+                    <div class="texto-final-expresivo" id="textoFinalCierre">ESPERANDO CONTEO...</div>
+                    <span class="monto-final" id="montoFinalCierre">0</span>
                 </div>
-                <div class="resumen-subtotal" id="tot-sub-b20">0.00</div>
-            </div>
 
-            <div class="resumen-row">
-                <div class="resumen-left">
-                    <span class="resumen-denom">S/ 10</span>
-                    <span class="resumen-qty" id="tot-qty-b10">0</span>
+                <!-- ACCIONES INFERIORES LIMPIAS -->
+                <div class="cierre-reset-zone">
+                    <button type="button" class="btn-borrar-todo-cierre" onpointerdown="event.preventDefault()" onclick="abrirPantallaHojas(3)" style="color:var(--bcp-blue); border-color:#93c5fd; background:#eff6ff;">
+                        <span>👥 BASE DE DATOS</span>
+                    </button>
+                    <button type="button" class="btn-borrar-todo-cierre" id="btnBorrarTurnosCierre" onpointerdown="event.preventDefault()" onclick="borrarTurnosEditados()">
+                        <span>🗑️ LIMPIAR TURNOS</span>
+                    </button>
                 </div>
-                <div class="resumen-subtotal" id="tot-sub-b10">0.00</div>
+
             </div>
-
-            <div class="gran-total-box">
-                <span class="gran-total-label">TOTAL</span>
-                <span class="gran-total-monto" id="gran-total-display">0.00</span>
-            </div>
-        </div>
-
-        <div class="leyenda-colores">
-            Colores por grupo sumado: 🟢 1er ➔ 🟠 2do ➔ 🔵 3er ➔ 🟣 4to+
-        </div>
-
-        <!-- Botón para registrar en Google Sheets -->
-        <button class="btn-global btn-enviar-sheets" id="btn-sync-sheets" onclick="enviarAGoogleSheets()">📤 Enviar Remesa a Google Sheets</button>
-
-        <button class="btn-global btn-peligro" onclick="reiniciarDepositoTotal()">Borrar Todo el Total (Nuevo Cliente)</button>
+        </form>
     </div>
 
-    <!-- PESTAÑA: BILLETES -->
-    <div id="Billetes" class="tab-content">
+    <!-- =========================================================
+         PANTALLA 3: HOJAS BCP (MOVIMIENTOS + DASHBOARD 280 + BASE DE DATOS)
+         ========================================================= -->
+    <div id="app-hojas" class="main-app-container">
+        <div class="hojas-wrapper">
 
-        <!-- Fila 200 -->
-        <div class="card">
-            <span class="card-denom">S/ 200</span>
-            <div class="controls">
-                <button class="btn-control" onclick="modificarInput('inp-b200', -1)">-</button>
-                <input type="number" id="inp-b200" class="input-qty" placeholder="0" oninput="actualizarVistaTotal()">
-                <button class="btn-control" onclick="modificarInput('inp-b200', 1)">+</button>
+            <div class="top-bar-hojas">
+                <button type="button" class="btn-top-hojas" onclick="cerrarPantallaHojas()">← VOLVER</button>
+                <div style="font-size:13.5px; font-weight:900; letter-spacing:0.5px;">HOJAS BCP</div>
+                <div style="display:flex; gap:5px;">
+                    <button type="button" class="btn-top-hojas btn-borrar-top" id="btnBorrarContextualHojas" onclick="accionBorrarHojaActiva()">🗑️ BORRAR</button>
+                    <button type="button" class="btn-top-hojas btn-excel-top" onclick="exportarHojasBcpXlsx()">📥 EXCEL</button>
+                </div>
             </div>
-            <button class="btn-save" id="btn-save-b200" onclick="guardarAlTotal('b200')"><span>+</span>Guardar</button>
-        </div>
 
-        <!-- Fila 100 -->
-        <div class="card">
-            <span class="card-denom">S/ 100</span>
-            <div class="controls">
-                <button class="btn-control" onclick="modificarInput('inp-b100', -1)">-</button>
-                <input type="number" id="inp-b100" class="input-qty" placeholder="0" oninput="actualizarVistaTotal()">
-                <button class="btn-control" onclick="modificarInput('inp-b100', 1)">+</button>
+            <div class="tabs-hojas-bar">
+                <button type="button" class="btn-tab-hoja active" id="tab-btn-hoja1" onclick="cambiarPestanaHojas(1)">
+                    <span>1 · MOVIMIENTOS</span>
+                    <span class="badge-contador-op" id="badgeCantMovimientos">0</span>
+                </button>
+                <button type="button" class="btn-tab-hoja" id="tab-btn-hoja2" onclick="cambiarPestanaHojas(2)">
+                    <span>2 · DASHBOARD 280</span>
+                </button>
+                <button type="button" class="btn-tab-hoja" id="tab-btn-hoja3" onclick="cambiarPestanaHojas(3)">
+                    <span>3 · PERSONAS</span>
+                    <span class="badge-contador-op" id="badgeCantPersonas">0</span>
+                </button>
             </div>
-            <button class="btn-save" id="btn-save-b100" onclick="guardarAlTotal('b100')"><span>+</span>Guardar</button>
-        </div>
 
-        <!-- Fila 50 -->
-        <div class="card">
-            <span class="card-denom">S/ 50</span>
-            <div class="controls">
-                <button class="btn-control" onclick="modificarInput('inp-b50', -1)">-</button>
-                <input type="number" id="inp-b50" class="input-qty" placeholder="0" oninput="actualizarVistaTotal()">
-                <button class="btn-control" onclick="modificarInput('inp-b50', 1)">+</button>
+            <div class="hojas-slider" id="sliderHojasBcp" onscroll="handleScrollHojasBcp()">
+
+                <!-- HOJA 1: MOVIMIENTOS REGISTRADOS HOY -->
+                <div class="hoja-page-view">
+                    <div class="hoja1-saldos-grid">
+                        <div class="card-saldo-hoja1">
+                            <div class="lbl-saldo-hoja1">OPERACIONES REGISTRADAS</div>
+                            <div class="val-saldo-hoja1" id="hoja1-total-ops">0</div>
+                        </div>
+                        <div class="card-saldo-hoja1 card-efectivo-actual">
+                            <div class="lbl-saldo-hoja1">MONTO ACUMULADO HOY</div>
+                            <div class="val-saldo-hoja1" id="hoja1-monto-acumulado">S/ 0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="tabla-movs-card">
+                        <div class="tabla-movs-header">
+                            <span>N° OP</span>
+                            <span>HORA</span>
+                            <span>PERSONA / DNI / TIPO</span>
+                            <span style="text-align:right;">MONTO (S/)</span>
+                        </div>
+                        <div class="tabla-movs-body" id="contenedorFilasMovimientos"></div>
+                    </div>
+                </div>
+
+                <!-- HOJA 2: DASHBOARD MENSUAL ACUMULADO (META 280) -->
+                <div class="hoja-page-view">
+                    <div class="hoja1-saldos-grid">
+                        <div class="card-saldo-hoja1">
+                            <div class="lbl-saldo-hoja1">PROMEDIO DIARIO MES</div>
+                            <div class="val-saldo-hoja1" id="hoja2-promedio-mes">0 OP</div>
+                        </div>
+                        <div class="card-saldo-hoja1 card-efectivo-actual">
+                            <div class="lbl-saldo-hoja1">DÍAS CUMPLIDOS (≥ 280)</div>
+                            <div class="val-saldo-hoja1" id="hoja2-dias-cumplidos">0 / 0</div>
+                        </div>
+                    </div>
+
+                    <div class="tabla-movs-card">
+                        <div class="tabla-mes-header">
+                            <span>FECHA</span>
+                            <span>MAÑ</span>
+                            <span>TAR</span>
+                            <span>REG</span>
+                            <span>TOTAL</span>
+                            <span>DIFERENCIA</span>
+                        </div>
+                        <div class="tabla-movs-body" id="contenedorFilasDashboardMes"></div>
+                    </div>
+                </div>
+
+                <!-- HOJA 3: BASE DE DATOS DE PERSONAS (DNI 8+1 VERIFICADOR Y CUENTAS) -->
+                <div class="hoja-page-view">
+                    <div style="display:flex; gap:6px; margin-bottom:6px; flex-shrink:0;">
+                        <input type="text" id="inputBuscarPersona" class="input-modal-std" inputmode="text" placeholder="🔍 Buscar por nombre o DNI..." oninput="renderizarHoja3BaseDatos()" style="height:35px; font-size:13px;">
+                        <button type="button" onclick="abrirModalPersona()" style="padding:0 12px; background:var(--bcp-blue); color:#fff; border:none; border-radius:8px; font-size:11.5px; font-weight:900; white-space:nowrap; cursor:pointer;">+ NUEVO</button>
+                    </div>
+                    <div class="tabla-movs-card">
+                        <div class="tabla-movs-header" style="grid-template-columns: 1.2fr 96px 56px 76px;">
+                            <span>NOMBRE / CUENTA</span>
+                            <span>DNI (8+1)</span>
+                            <span style="text-align:center;">OP</span>
+                            <span style="text-align:right;">ACCIÓN</span>
+                        </div>
+                        <div class="tabla-movs-body" id="contenedorFilasPersonas"></div>
+                    </div>
+                </div>
+
             </div>
-            <button class="btn-save" id="btn-save-b50" onclick="guardarAlTotal('b50')"><span>+</span>Guardar</button>
         </div>
+    </div>
 
-        <!-- Fila 20 -->
-        <div class="card">
-            <span class="card-denom">S/ 20</span>
-            <div class="controls">
-                <button class="btn-control" onclick="modificarInput('inp-b20', -1)">-</button>
-                <input type="number" id="inp-b20" class="input-qty" placeholder="0" oninput="actualizarVistaTotal()">
-                <button class="btn-control" onclick="modificarInput('inp-b20', 1)">+</button>
+    <!-- =========================================================
+         CONMUTADOR CIRCULAR FLOTANTE 2D
+         ========================================================= -->
+    <button type="button" id="btnGoogleSwitcher" class="google-account-switcher" title="Toca para cambiar Operaciones / Control 280 · Arrastra para mover">
+        <div class="switcher-inner-circle">
+            <svg class="switcher-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 2.1l4 4-4 4"/>
+                <path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8"/>
+                <path d="M7 21.9l-4-4 4-4"/>
+                <path d="M21 11.8v2a4 4 0 0 1-4 4H4.2"/>
+            </svg>
+            <span class="switcher-mini-label" id="lblSwitcherModo">CAJA</span>
+        </div>
+    </button>
+
+    <!-- =========================================================
+         MODAL LIMPIO: REGISTRAR / EDITAR PERSONA (TECLADOS CONTEXTUALES)
+         ========================================================= -->
+    <div class="modal-config" id="modalPersona">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="tituloModalPersona">👤 Registro de Persona</h3>
+                <button type="button" class="btn-close-modal" onclick="cerrarModalPersona()">✕</button>
             </div>
-            <button class="btn-save" id="btn-save-b20" onclick="guardarAlTotal('b20')"><span>+</span>Guardar</button>
+            <form id="formModalPersona" onsubmit="guardarPersonaEnBaseDatos(event)" action="javascript:void(0);">
+                <input type="hidden" id="editPersonaId">
+                <div class="form-group-modal">
+                    <label for="inpPerNombre">Nombre de la Persona (Teclado de Letras)</label>
+                    <input type="text" id="inpPerNombre" class="input-modal-std" inputmode="text" autocapitalize="words" autocomplete="off" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('inpPerDni').focus();}" placeholder="Ej: Tito Vidal">
+                </div>
+                <div class="form-group-modal">
+                    <label for="inpPerDni">DNI (8 dígitos + 1 verificador · Teclado Numérico)</label>
+                    <input type="tel" id="inpPerDni" class="input-modal-std" inputmode="numeric" pattern="[0-9\-]*" maxlength="10" autocomplete="off" enterkeyhint="next" oninput="formatearInputDniVerificador(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('inpPerCuenta').focus();}" placeholder="Ej: 72458910-4">
+                </div>
+                <div class="form-group-modal">
+                    <label for="inpPerCuenta">Celular / N° de Cuenta (Teclado Numérico)</label>
+                    <input type="tel" id="inpPerCuenta" class="input-modal-std" inputmode="numeric" pattern="[0-9\-]*" autocomplete="off" enterkeyhint="done" oninput="this.value=this.value.replace(/[^0-9\-]/g,'')" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarPersonaEnBaseDatos(event);}" placeholder="Ej: 987654321">
+                </div>
+                <div style="display:flex; gap:6px; margin-top:12px;">
+                    <button type="submit" style="flex:2; height:40px; background:var(--bcp-blue); color:#fff; border:none; border-radius:8px; font-weight:900; cursor:pointer;">GUARDAR</button>
+                    <button type="button" id="btnEliminarPerModal" onclick="eliminarPersonaDeBaseDatos()" style="flex:1; height:40px; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; border-radius:8px; font-weight:900; cursor:pointer; display:none;">BORRAR</button>
+                </div>
+            </form>
         </div>
-
-        <!-- Fila 10 -->
-        <div class="card">
-            <span class="card-denom">S/ 10</span>
-            <div class="controls">
-                <button class="btn-control" onclick="modificarInput('inp-b10', -1)">-</button>
-                <input type="number" id="inp-b10" class="input-qty" placeholder="0" oninput="actualizarVistaTotal()">
-                <button class="btn-control" onclick="modificarInput('inp-b10', 1)">+</button>
-            </div>
-            <button class="btn-save" id="btn-save-b10" onclick="guardarAlTotal('b10')"><span>+</span>Guardar</button>
-        </div>
-
-        <div class="action-bar">
-            <button class="btn-global btn-borrar-input" onclick="limpiarInputsActuales()">Borrar Actual</button>
-            <button class="btn-global btn-guardar-todo" onclick="guardarTodo()">Guardar Todo 💾</button>
-        </div>
-
     </div>
 
     <script>
-        // URL de tu implementación de Google Apps Script
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0jWIN_loSAftgC56lUR5Yzrid3qW-qmJBqssVOUHzwZYidNSu2VLEZ-Wq8B2rq3dZ/exec";
+        /* ===============================================================
+           MOTOR 100% LOCAL DE CERO LATENCIA (OPERACIONES + BASE DE DATOS + DASHBOARD 280)
+           =============================================================== */
+        const KEY_PERSONAS_DB    = 'bcp_db_personas_v3';
+        const KEY_MOVIMIENTOS_H1 = 'bcp_db_movimientos_h1_v3';
+        const KEY_DASHBOARD_H2   = 'bcp_db_dashboard_h2_v3';
+        const KEY_ESTADO_CAJA    = 'bcp_db_estado_caja_v3';
 
-        // BÓVEDA PRINCIPAL
-        let bodegaAcumulada = { b200: 0, b100: 0, b50: 0, b20: 0, b10: 0 };
-        // CONTADOR DE LOTES (Grupos de billetes guardados de la misma denominación)
-        let conteoLotes = { b200: 0, b100: 0, b50: 0, b20: 0, b10: 0 }; 
+        let contextoPrincipal = localStorage.getItem('bcp_contexto_activo_v3') || 'caja';
+        let modoOperacion = localStorage.getItem('bcp_modo_operacion_v3') || 'deposito';
 
-        const valoresNominales = { b200: 200, b100: 100, b50: 50, b20: 20, b10: 10 };
+        let baseDatosPersonas = [
+            { id: 'per_1', nombre: 'General / Directo', dni: '00000000-0', cuenta: '' }
+        ];
+        let personaActivaId = 'per_1';
 
-        function openTab(evt, tabName) {
-            let tabcontent = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].classList.remove("active");
-            }
-            let tablinks = document.getElementsByClassName("tab-btn");
-            for (let i = 0; i < tablinks.length; i++) {
-                tablinks[i].classList.remove("active");
-            }
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
+        let listaMovimientosHoja1 = [];
+        let listaDashboardMensual = [];
+
+        let metaDiariaObjetivo = parseInt(localStorage.getItem('bcp_meta_diaria_v3')) || 280;
+        let opTurnoManana = 0;
+        let opTurnoTarde  = 0;
+
+        let hojaActivaActual = 1;
+        let esTransicionClickHoja = false;
+        let timerTransicionHoja = null;
+        let timestampUltimoEnterCaja = 0;
+        let ultimoInputCajaActivo = 'b1';
+        let ultimoInputCierreActivo = 'input-turno-manana';
+        let altoPantallaSinTeclado = Math.max(window.innerHeight || 640, 520);
+
+        const formatoSoles = (num) => Math.abs(Number(num) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function obtenerFechaHoyStr() {
+            const d = new Date();
+            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
         }
 
-        function formatoMoneda(valor) {
-            return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function crearMapa10Cuadros() {
+            const obj = {};
+            for (let i = 1; i <= 10; i++) obj['b' + i] = '';
+            return obj;
         }
 
-        function modificarInput(id, cantidad) {
-            let input = document.getElementById(id);
-            let valorActual = parseInt(input.value) || 0;
-            let nuevoValor = valorActual + cantidad;
-            if (nuevoValor >= 0) {
-                input.value = nuevoValor;
+        let datosPorModo = {
+            deposito: crearMapa10Cuadros(),
+            recibo:   crearMapa10Cuadros(),
+            retiro:   crearMapa10Cuadros(),
+            yape:     crearMapa10Cuadros()
+        };
+
+        /* ===============================================================
+           FORMATEO INTELIGENTE DE DNI PERUANO (8 DÍGITOS + 1 DÍGITO VERIFICADOR = 9)
+           =============================================================== */
+        function normalizarDniConVerificador(rawStr) {
+            const limpio = String(rawStr || '').replace(/[^0-9]/g, '').substring(0, 9);
+            if (limpio.length === 9) {
+                return limpio.substring(0, 8) + '-' + limpio.substring(8, 9);
+            }
+            return limpio;
+        }
+
+        function formatearInputDniVerificador(input) {
+            const soloDigitos = input.value.replace(/[^0-9]/g, '').substring(0, 9);
+            if (soloDigitos.length === 9) {
+                input.value = soloDigitos.substring(0, 8) + '-' + soloDigitos.substring(8, 9);
             } else {
-                input.value = ""; 
-            }
-            actualizarVistaTotal();
-        }
-
-        // MOTOR EN TIEMPO REAL CON LÓGICA DE COLORES
-        function actualizarVistaTotal() {
-            let sumaGranTotal = 0;
-
-            ['b200', 'b100', 'b50', 'b20', 'b10'].forEach(den => {
-                let cantidadEnBodega = bodegaAcumulada[den];
-                let cantidadEnInput = parseInt(document.getElementById('inp-' + den).value) || 0;
-                let loteActual = conteoLotes[den];
-
-                let cantidadVisual = cantidadEnBodega + cantidadEnInput;
-                let subtotalVisual = cantidadVisual * valoresNominales[den];
-
-                sumaGranTotal += subtotalVisual;
-
-                let spanQty = document.getElementById('tot-qty-' + den);
-                spanQty.innerText = cantidadVisual;
-
-                // Reiniciar clases de color
-                spanQty.className = 'resumen-qty'; 
-
-                if (cantidadVisual > 0) {
-                    let nivelColor = loteActual;
-
-                    if (loteActual === 0 && cantidadEnInput > 0) nivelColor = 1;
-
-                    if (loteActual > 0 && cantidadEnInput > 0) nivelColor = loteActual + 1;
-
-                    if (nivelColor > 4) nivelColor = 4;
-
-                    spanQty.classList.add('lote-' + nivelColor);
-                }
-
-                document.getElementById('tot-sub-' + den).innerText = cantidadVisual > 0 ? formatoMoneda(subtotalVisual) : "0.00";
-            });
-
-            document.getElementById('gran-total-display').innerText = formatoMoneda(sumaGranTotal);
-        }
-
-        function guardarAlTotal(denominacion) {
-            let idInput = 'inp-' + denominacion;
-            let cantidadIngresada = parseInt(document.getElementById(idInput).value) || 0;
-
-            if (cantidadIngresada > 0) {
-                bodegaAcumulada[denominacion] += cantidadIngresada;
-                conteoLotes[denominacion]++; 
-
-                document.getElementById(idInput).value = "";
-                actualizarVistaTotal();
-
-                let btn = document.getElementById('btn-save-' + denominacion);
-                btn.classList.add('success');
-                btn.innerHTML = "✅ Listo";
-                setTimeout(() => {
-                    btn.classList.remove('success');
-                    btn.innerHTML = "<span>+</span>Guardar";
-                }, 800);
+                input.value = soloDigitos;
             }
         }
 
-        function guardarTodo() {
-            let hayDatos = false;
-            ['b200', 'b100', 'b50', 'b20', 'b10'].forEach(den => {
-                if(parseInt(document.getElementById('inp-' + den).value) > 0) {
-                    guardarAlTotal(den);
-                    hayDatos = true;
+        function renderizarDniConVerificadorHtml(dniStr) {
+            if (!dniStr) return '--------';
+            const partes = String(dniStr).split('-');
+            if (partes.length === 2) {
+                return `${partes[0]}<span class="dni-digito-verificador">-${partes[1]}</span>`;
+            }
+            if (dniStr.length === 9) {
+                return `${dniStr.substring(0, 8)}<span class="dni-digito-verificador">-${dniStr.substring(8, 9)}</span>`;
+            }
+            return dniStr;
+        }
+
+        /* ===============================================================
+           ALMACENAMIENTO LOCAL BLINDADO
+           =============================================================== */
+        function cargarDatosLocales() {
+            try {
+                const rawPer = localStorage.getItem(KEY_PERSONAS_DB) || localStorage.getItem('bcp_db_personas_v2');
+                if (rawPer) {
+                    const parsed = JSON.parse(rawPer);
+                    if (Array.isArray(parsed) && parsed.length > 0) baseDatosPersonas = parsed;
                 }
-            });
-            if(hayDatos && navigator.vibrate) navigator.vibrate(100);
+            } catch (e) {}
+
+            try {
+                const rawMovs = localStorage.getItem(KEY_MOVIMIENTOS_H1) || localStorage.getItem('bcp_db_movimientos_h1_v2');
+                if (rawMovs) {
+                    const parsed = JSON.parse(rawMovs);
+                    if (Array.isArray(parsed)) listaMovimientosHoja1 = parsed;
+                }
+            } catch (e) {}
+
+            try {
+                const rawDash = localStorage.getItem(KEY_DASHBOARD_H2) || localStorage.getItem('bcp_db_dashboard_h2_v2');
+                if (rawDash) {
+                    const parsed = JSON.parse(rawDash);
+                    if (Array.isArray(parsed)) listaDashboardMensual = parsed;
+                }
+            } catch (e) {}
+
+            try {
+                const rawEst = localStorage.getItem(KEY_ESTADO_CAJA) || localStorage.getItem('bcp_db_estado_caja_v2');
+                if (rawEst) {
+                    const est = JSON.parse(rawEst);
+                    if (est.personaActivaId) personaActivaId = est.personaActivaId;
+                    if (est.datosPorModo) {
+                        ['deposito', 'recibo', 'retiro', 'yape'].forEach(m => {
+                            if (est.datosPorModo[m]) {
+                                for (let i = 1; i <= 10; i++) {
+                                    datosPorModo[m]['b' + i] = est.datosPorModo[m]['b' + i] || '';
+                                }
+                            }
+                        });
+                    }
+                    opTurnoManana = parseInt(est.opTurnoManana) || 0;
+                    opTurnoTarde  = parseInt(est.opTurnoTarde) || 0;
+                }
+            } catch (e) {}
+
+            if (!baseDatosPersonas.some(p => p.id === personaActivaId)) {
+                personaActivaId = baseDatosPersonas[0].id;
+            }
         }
 
-        function limpiarInputsActuales() {
-            ['b200', 'b100', 'b50', 'b20', 'b10'].forEach(den => {
-                document.getElementById('inp-' + den).value = "";
-            });
-            actualizarVistaTotal();
+        function guardarEstadoGeneralEnStorage() {
+            try {
+                localStorage.setItem(KEY_PERSONAS_DB, JSON.stringify(baseDatosPersonas));
+                localStorage.setItem(KEY_MOVIMIENTOS_H1, JSON.stringify(listaMovimientosHoja1));
+                localStorage.setItem(KEY_DASHBOARD_H2, JSON.stringify(listaDashboardMensual));
+                localStorage.setItem(KEY_ESTADO_CAJA, JSON.stringify({
+                    personaActivaId,
+                    datosPorModo,
+                    opTurnoManana,
+                    opTurnoTarde
+                }));
+            } catch (e) {}
         }
 
-        function reiniciarDepositoTotal() {
-            bodegaAcumulada = { b200: 0, b100: 0, b50: 0, b20: 0, b10: 0 };
-            conteoLotes = { b200: 0, b100: 0, b50: 0, b20: 0, b10: 0 };
+        /* ===============================================================
+           SEÑALES VISUALES SOBRIAS
+           =============================================================== */
+        const SIGNALS = {
+            esperando: {
+                L: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+                R: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`
+            },
+            mano: {
+                L: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>`,
+                R: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>`
+            },
+            faltante: {
+                L: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="7" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>`,
+                R: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="7" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>`
+            },
+            exacto: {
+                L: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+                R: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+            }
+        };
 
-            limpiarInputsActuales();
-            document.querySelectorAll('.tab-btn')[1].click(); 
+        function setResultadoPanel(textoId, montoId, iconoKey, mensajeTexto, valorFormateado) {
+            const textoEl = document.getElementById(textoId);
+            const montoEl = document.getElementById(montoId);
+            const sig = SIGNALS[iconoKey] || SIGNALS.esperando;
+            textoEl.innerHTML = `<span class="sig-wing">${sig.L}</span><span>${mensajeTexto}</span><span class="sig-wing">${sig.R}</span>`;
+            if (montoEl.innerText !== String(valorFormateado)) {
+                montoEl.innerText = valorFormateado;
+            }
         }
 
-        // FUNCIÓN QUE ENVÍA LA REMESA A GOOGLE SHEETS
-        function enviarAGoogleSheets() {
-            let total = 0;
-            ['b200', 'b100', 'b50', 'b20', 'b10'].forEach(den => {
-                total += bodegaAcumulada[den] * valoresNominales[den];
-            });
+        function vibrarRapido(patron = 12) {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                navigator.vibrate(patron);
+            }
+        }
 
-            if (total === 0) {
-                alert("Primero debes registrar billetes en el Total antes de enviar.");
+        function mantenerPosicionEstatica() {
+            if (window.scrollY !== 0 || window.scrollX !== 0) {
+                window.scrollTo(0, 0);
+            }
+        }
+        window.addEventListener('scroll', mantenerPosicionEstatica, { passive: true });
+        document.addEventListener('focusin', () => window.scrollTo(0, 0));
+
+        /* ===============================================================
+           INVOCACIÓN DE PERSONA DESDE BASE DE DATOS
+           =============================================================== */
+        function renderizarSelectorPersonas() {
+            const sel = document.getElementById('selectClienteActivo');
+            if (!sel) return;
+
+            let html = '';
+            baseDatosPersonas.forEach(p => {
+                const selected = (p.id === personaActivaId) ? 'selected' : '';
+                html += `<option value="${p.id}" ${selected}>👤 ${p.nombre}</option>`;
+            });
+            sel.innerHTML = html;
+            actualizarBadgeDniActivo();
+        }
+
+        function cambiarClienteSeleccionado(nuevoId) {
+            vibrarRapido(10);
+            personaActivaId = nuevoId;
+            actualizarBadgeDniActivo();
+            actualizarEstiloVisualModo();
+            calcularTodoCaja();
+            guardarEstadoGeneralEnStorage();
+            enfocarSiguienteInputVisible('app-caja');
+        }
+
+        function obtenerPersonaActivaObj() {
+            return baseDatosPersonas.find(p => p.id === personaActivaId) || baseDatosPersonas[0];
+        }
+
+        function actualizarBadgeDniActivo() {
+            const per = obtenerPersonaActivaObj();
+            const elDni = document.getElementById('lblDniClienteActivo');
+            if (elDni && per) {
+                elDni.innerHTML = renderizarDniConVerificadorHtml(per.dni);
+            }
+        }
+
+        function copiarDniClienteActivo() {
+            const per = obtenerPersonaActivaObj();
+            if (!per || !per.dni) return;
+            vibrarRapido(16);
+            const solo8o9 = per.dni.replace(/[^0-9]/g, '');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(solo8o9).catch(() => {});
+            }
+            const badge = document.getElementById('badgeOperacion');
+            badge.innerText = `📋 DNI ${per.dni} COPIADO (${per.nombre.toUpperCase()})`;
+            setTimeout(() => { actualizarEstiloVisualModo(); }, 850);
+        }
+
+        /* ===============================================================
+           LÓGICA DE LA CAJA PRINCIPAL (INGRESO MANUAL, COMA = 00 Y ENTER A HISTORIAL)
+           =============================================================== */
+        function parseValorCentimosDeTexto(str) {
+            if (!str) return 0;
+            const raw = String(str).replace(/,/g, '').trim();
+            const num = parseFloat(raw);
+            return isNaN(num) ? 0 : Math.round(num * 100);
+        }
+
+        function formatInput(input) {
+            let original = input.value;
+            if (original === "") return;
+            let esNegativo = original.trim().startsWith('-');
+            let numerico = original.replace(/[^0-9.]/g, '');
+            let partes = numerico.split('.');
+            if (partes.length > 2) {
+                numerico = partes[0] + '.' + partes.slice(1).join('');
+                partes = numerico.split('.');
+            }
+            if (partes[0].length > 0) {
+                let entero = parseInt(partes[0], 10);
+                partes[0] = isNaN(entero) ? "" : entero.toLocaleString('en-US');
+            }
+            if (partes[1] !== undefined && partes[1].length > 2) {
+                partes[1] = partes[1].substring(0, 2);
+            }
+            let resultado = partes.join('.');
+            input.value = (esNegativo && resultado !== "") ? '-' + resultado : resultado;
+        }
+
+        function insertarDobleCero(input) {
+            if (!input || input.readOnly) return;
+
+            if (input.id === 'input-turno-manana' || input.id === 'input-turno-tarde') {
+                let actual = input.value.replace(/[^0-9]/g, '');
+                input.value = (actual === '' || actual === '0') ? '' : actual + '00';
+                handleInputTurnos(input);
+                vibrarRapido();
                 return;
             }
 
-            let btn = document.getElementById('btn-sync-sheets');
-            btn.innerText = "⏳ Enviando a Sheets...";
-            btn.disabled = true;
+            let val = input.value.replace(/,/g, '').trim();
+            if (val === '' || val === '0') {
+                val = '00';
+            } else if (!val.includes('.')) {
+                val = val + '00';
+            } else {
+                let partes = val.split('.');
+                if (partes[1].length === 0) partes[1] = '00';
+                else if (partes[1].length === 1) partes[1] = partes[1] + '0';
+                val = partes[0] + '.' + partes[1].substring(0, 2);
+            }
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    b200: bodegaAcumulada.b200,
-                    b100: bodegaAcumulada.b100,
-                    b50: bodegaAcumulada.b50,
-                    b20: bodegaAcumulada.b20,
-                    b10: bodegaAcumulada.b10,
-                    total: total
-                })
-            }).then(() => {
-                btn.innerText = "✅ ¡Guardado en Sheets!";
-                setTimeout(() => {
-                    btn.innerText = "📤 Enviar Remesa a Google Sheets";
-                    btn.disabled = false;
-                }, 2000);
-            }).catch(err => {
-                console.error("Error al enviar a Sheets:", err);
-                btn.innerText = "❌ Error al enviar";
-                setTimeout(() => {
-                    btn.innerText = "📤 Enviar Remesa a Google Sheets";
-                    btn.disabled = false;
-                }, 2000);
+            input.value = val;
+            formatInput(input);
+            registrarFocoCaja(input);
+            actualizarExpansionInteligenteBloques();
+            guardarValoresModoActual();
+            calcularTodoCaja();
+            vibrarRapido();
+        }
+
+        function registrarFocoCaja(input) {
+            if (input && !input.readOnly) ultimoInputCajaActivo = input.id;
+        }
+
+        function registrarFocoCierre(input) {
+            if (input && !input.readOnly) ultimoInputCierreActivo = input.id;
+        }
+
+        function guardarValoresModoActual() {
+            for (let i = 1; i <= 10; i++) {
+                const el = document.getElementById('b' + i);
+                if (el) datosPorModo[modoOperacion]['b' + i] = el.value;
+            }
+            actualizarIndicadoresColaEnBotonesModo();
+            guardarEstadoGeneralEnStorage();
+        }
+
+        function restaurarValoresModoActual() {
+            for (let i = 1; i <= 10; i++) {
+                const elB = document.getElementById('b' + i);
+                if (elB) {
+                    elB.value = datosPorModo[modoOperacion]['b' + i] || '';
+                    formatInput(elB);
+                }
+            }
+            actualizarExpansionInteligenteBloques();
+            actualizarIndicadoresColaEnBotonesModo();
+        }
+
+        function obtenerOperacionesPendientesDeModo(modo) {
+            const listaMontosSoles = [];
+            for (let i = 1; i <= 10; i++) {
+                let valorTexto = datosPorModo[modo]['b' + i];
+                if (modo === modoOperacion) {
+                    const elDom = document.getElementById('b' + i);
+                    if (elDom) valorTexto = elDom.value;
+                }
+                const cent = parseValorCentimosDeTexto(valorTexto);
+                if (cent > 0) {
+                    listaMontosSoles.push(cent / 100);
+                }
+            }
+            return listaMontosSoles;
+        }
+
+        function actualizarIndicadoresColaEnBotonesModo() {
+            const mapBtn = {
+                deposito: 'btn-modo-deposito',
+                recibo:   'btn-modo-servicio',
+                retiro:   'btn-modo-retiro',
+                yape:     'btn-modo-yape'
+            };
+            ['deposito', 'recibo', 'retiro', 'yape'].forEach(m => {
+                const btn = document.getElementById(mapBtn[m]);
+                if (!btn) return;
+                const tienePendiente = (m !== modoOperacion) && (obtenerOperacionesPendientesDeModo(m).length > 0);
+                btn.classList.toggle('tiene-cola-pendiente', tienePendiente);
             });
         }
 
-        window.onload = actualizarVistaTotal;
+        function actualizarExpansionInteligenteBloques() {
+            const sup1a4Llenos = ['b1', 'b2', 'b3', 'b4'].every(id => document.getElementById(id).value.trim() !== '');
+            const sup5o6ConDato = ['b5', 'b6'].some(id => document.getElementById(id).value.trim() !== '');
+            const expandirSup = sup1a4Llenos || sup5o6ConDato;
+
+            const filaExtraSup = document.getElementById('filaExtraSup');
+            const cajaSup = document.getElementById('cajaSuperiorContenedor');
+            if (filaExtraSup) filaExtraSup.classList.toggle('activa', expandirSup);
+            if (cajaSup) cajaSup.classList.toggle('bloque-con-6', expandirSup);
+        }
+
+        function actualizarEstiloVisualModo() {
+            const panelSuperior = document.getElementById('panelSuperior');
+            const tituloSuperior = document.getElementById('lblTituloSuperior');
+            const cajaSup = document.getElementById('cajaSuperiorContenedor');
+            const badge = document.getElementById('badgeOperacion');
+            const per = obtenerPersonaActivaObj();
+            const sufijoCuenta = (per && per.cuenta) ? ` · ${per.cuenta}` : '';
+
+            panelSuperior.className = 'panel-total';
+            cajaSup.classList.remove('tema-recibo-bg', 'tema-retiro-bg', 'tema-deposito-bg', 'tema-yape-bg');
+
+            ['deposito', 'servicio', 'retiro', 'yape'].forEach(id => {
+                document.getElementById('btn-modo-' + id).classList.remove('active-modo');
+            });
+
+            if (modoOperacion === 'deposito') {
+                panelSuperior.classList.add('tema-deposito-header');
+                tituloSuperior.innerText = 'MONTOS DE DEPÓSITO';
+                cajaSup.classList.add('tema-deposito-bg');
+                badge.innerText = `DEPÓSITO EN CUENTA${sufijoCuenta}`;
+                document.getElementById('btn-modo-deposito').classList.add('active-modo');
+            } else if (modoOperacion === 'recibo') {
+                panelSuperior.classList.add('tema-recibo-header');
+                tituloSuperior.innerText = 'PAGO DE SERVICIOS';
+                cajaSup.classList.add('tema-recibo-bg');
+                badge.innerText = `PAGO DE SERVICIOS / RECIBO${sufijoCuenta}`;
+                document.getElementById('btn-modo-servicio').classList.add('active-modo');
+            } else if (modoOperacion === 'retiro') {
+                panelSuperior.classList.add('tema-retiro-header');
+                tituloSuperior.innerText = 'RETIRO EN EFECTIVO';
+                cajaSup.classList.add('tema-retiro-bg');
+                badge.innerText = `RETIRO EN EFECTIVO · DNI ${per ? per.dni : ''}`;
+                document.getElementById('btn-modo-retiro').classList.add('active-modo');
+            } else if (modoOperacion === 'yape') {
+                panelSuperior.classList.add('tema-yape-header');
+                tituloSuperior.innerText = 'RECARGA / ENVÍO YAPE';
+                cajaSup.classList.add('tema-yape-bg');
+                badge.innerText = `OPERACIÓN YAPE${sufijoCuenta}`;
+                document.getElementById('btn-modo-yape').classList.add('active-modo');
+            }
+            actualizarIndicadoresColaEnBotonesModo();
+        }
+
+        function seleccionarModoDirecto(event, nuevoModo) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            vibrarRapido();
+            if (modoOperacion === nuevoModo) {
+                enfocarSiguienteInputVisible('app-caja');
+                return;
+            }
+            guardarValoresModoActual();
+            modoOperacion = nuevoModo;
+            localStorage.setItem('bcp_modo_operacion_v3', modoOperacion);
+            ultimoInputCajaActivo = null;
+
+            actualizarEstiloVisualModo();
+            restaurarValoresModoActual();
+            calcularTodoCaja();
+            enfocarSiguienteInputVisible('app-caja');
+        }
+
+        function handleInput(input) {
+            formatInput(input);
+            registrarFocoCaja(input);
+            actualizarExpansionInteligenteBloques();
+            guardarValoresModoActual();
+            calcularTodoCaja();
+        }
+
+        function calcularTodoCaja() {
+            actualizarExpansionInteligenteBloques();
+
+            let centimosTotal = 0;
+            let centimosPag2 = 0;
+            let cantCajasConMonto = 0;
+
+            for (let i = 1; i <= 10; i++) {
+                const el = document.getElementById('b' + i);
+                const v = el ? parseValorCentimosDeTexto(el.value) : 0;
+                if (v > 0) {
+                    centimosTotal += v;
+                    cantCajasConMonto++;
+                    if (i >= 7) centimosPag2 += v;
+                }
+            }
+
+            document.getElementById('dot-sup-2').classList.toggle('has-data', centimosPag2 > 0);
+            const totalSoles = centimosTotal / 100;
+            document.getElementById('lblTotalMontos').innerText = formatoSoles(totalSoles);
+
+            const panel = document.getElementById('panelFinal');
+            const per = obtenerPersonaActivaObj();
+            const nombrePer = per ? per.nombre : 'CLIENTE';
+
+            if (cantCajasConMonto === 0) {
+                panel.className = 'panel-resultado estado-esperando';
+                setResultadoPanel('textoFinal', 'montoFinal', 'esperando', 'ESPERANDO MONTOS...', '0.00');
+            } else {
+                if (modoOperacion === 'retiro') {
+                    panel.className = 'panel-resultado estado-retiro';
+                } else if (modoOperacion === 'deposito') {
+                    panel.className = 'panel-resultado estado-deposito';
+                } else if (modoOperacion === 'yape') {
+                    panel.className = 'panel-resultado estado-proceso';
+                } else {
+                    panel.className = 'panel-resultado estado-cobrar';
+                }
+                const labelOp = cantCajasConMonto === 1 ? '1 OPERACIÓN' : `${cantCajasConMonto} OPERACIONES`;
+                setResultadoPanel('textoFinal', 'montoFinal', 'mano', `${nombrePer} · ${labelOp}`, formatoSoles(totalSoles));
+            }
+        }
+
+        function recalcularCorrelativosMovimientos() {
+            for (let i = 0; i < listaMovimientosHoja1.length; i++) {
+                listaMovimientosHoja1[i].numOp = i + 1;
+            }
+        }
+
+        // ENTER EN TECLADO: REGISTRA AUTOMÁTICAMENTE EN MOVIMIENTOS, DASHBOARD Y LIMPIA PARA LA SIGUIENTE OPERACIÓN
+        function ejecutarAccionTecladoCaja(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            const ahoraMs = Date.now();
+            if (ahoraMs - timestampUltimoEnterCaja < 220) return false;
+            timestampUltimoEnterCaja = ahoraMs;
+
+            guardarValoresModoActual();
+
+            const mapaEtiqueta = {
+                deposito: 'DEPÓSITO',
+                recibo:   'SERVICIO',
+                retiro:   'RETIRO',
+                yape:     'YAPE'
+            };
+
+            const todosLosModos = ['deposito', 'recibo', 'retiro', 'yape'];
+            const ordenEscaneo = todosLosModos.filter(m => m !== modoOperacion).concat([modoOperacion]);
+
+            const per = obtenerPersonaActivaObj();
+            const ahora = new Date();
+            const fechaStr = obtenerFechaHoyStr();
+            const horaStr = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+            let totalNuevasOps = 0;
+            let ultimoMontoGuardado = 0;
+
+            ordenEscaneo.forEach(m => {
+                const montos = obtenerOperacionesPendientesDeModo(m);
+                montos.forEach(montoVal => {
+                    const sigNum = listaMovimientosHoja1.length + 1;
+                    listaMovimientosHoja1.push({
+                        idUnico: `OP-${Date.now()}-${sigNum}`,
+                        numOp: sigNum,
+                        fecha: fechaStr,
+                        hora: horaStr,
+                        personaId: per ? per.id : 'per_1',
+                        personaNombre: per ? per.nombre : 'General',
+                        personaDni: per ? per.dni : '',
+                        personaCuenta: per ? per.cuenta : '',
+                        tipo: mapaEtiqueta[m],
+                        monto: m === 'retiro' ? -Math.abs(montoVal) : Math.abs(montoVal)
+                    });
+                    totalNuevasOps++;
+                    ultimoMontoGuardado = montoVal;
+                });
+            });
+
+            limpiarCaja();
+            actualizarVistasYControl280();
+            enfocarSiguienteInputVisible('app-caja');
+
+            if (totalNuevasOps > 0) {
+                vibrarRapido([16, 24, 16]);
+                const badge = document.getElementById('badgeOperacion');
+                badge.innerText = totalNuevasOps > 1
+                    ? `✓ ${totalNuevasOps} OPERACIONES GUARDADAS (${per ? per.nombre.toUpperCase() : ''})`
+                    : `✓ OP #${listaMovimientosHoja1.length} GUARDADA · ${per ? per.nombre.toUpperCase() : ''} (S/ ${formatoSoles(ultimoMontoGuardado)})`;
+                setTimeout(() => actualizarEstiloVisualModo(), 850);
+            }
+
+            return false;
+        }
+
+        function limpiarCaja() {
+            document.querySelectorAll('#app-caja input').forEach(i => { i.value = ''; });
+            ['deposito', 'recibo', 'retiro', 'yape'].forEach(m => {
+                for (let i = 1; i <= 10; i++) datosPorModo[m]['b' + i] = '';
+            });
+            ultimoInputCajaActivo = 'b1';
+
+            document.getElementById('swipeMontos').scrollTo({ left: 0, behavior: 'instant' });
+            document.getElementById('dot-sup-1').classList.add('active');
+            document.getElementById('dot-sup-2').classList.remove('active', 'has-data');
+
+            actualizarExpansionInteligenteBloques();
+            actualizarIndicadoresColaEnBotonesModo();
+            calcularTodoCaja();
+            guardarEstadoGeneralEnStorage();
+            vibrarRapido();
+        }
+
+        /* ===============================================================
+           CONTROLADORES DE TECLADO ANDROID (COMA = 00 Y ENTER = GUARDAR)
+           =============================================================== */
+        function procesarTeclasEspeciales(e) {
+            if (document.getElementById('modalPersona').classList.contains('active')) return;
+            if (document.getElementById('app-hojas').classList.contains('active-app')) return;
+
+            if (e.key === ',' || e.code === 'Comma') {
+                const el = document.activeElement;
+                if (el && el.tagName === 'INPUT' && !el.readOnly) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    insertarDobleCero(el);
+                    return;
+                }
+            }
+
+            const esEnterOAccion = (
+                e.key === 'Enter' || e.keyCode === 13 || e.which === 13 ||
+                e.code === 'Enter' || e.code === 'NumpadEnter' || e.key === 'ArrowRight'
+            );
+
+            if (esEnterOAccion) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (document.getElementById('app-caja').classList.contains('active-app')) {
+                    ejecutarAccionTecladoCaja(e);
+                } else if (document.getElementById('app-cierre').classList.contains('active-app')) {
+                    ejecutarGuardadoTurnosConEnter(e);
+                }
+            }
+        }
+
+        document.addEventListener('keydown', procesarTeclasEspeciales, true);
+
+        document.addEventListener('beforeinput', (e) => {
+            if (document.getElementById('modalPersona').classList.contains('active')) return;
+            if (document.getElementById('app-hojas').classList.contains('active-app')) return;
+
+            if (e.data === ',') {
+                const el = document.activeElement;
+                if (el && el.tagName === 'INPUT' && !el.readOnly) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    insertarDobleCero(el);
+                    return;
+                }
+            }
+
+            if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph' || e.data === '\n') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (document.getElementById('app-caja').classList.contains('active-app')) {
+                    ejecutarAccionTecladoCaja(e);
+                } else if (document.getElementById('app-cierre').classList.contains('active-app')) {
+                    ejecutarGuardadoTurnosConEnter(e);
+                }
+            }
+        }, true);
+
+        /* ===============================================================
+           PANTALLA 2: CONTROL SOBRIO DE META 280 (MAÑANA + TARDE + REGISTRADAS)
+           =============================================================== */
+        function handleInputTurnos(input) {
+            if (input) registrarFocoCierre(input);
+            const elMan = document.getElementById('input-turno-manana');
+            const elTar = document.getElementById('input-turno-tarde');
+            opTurnoManana = parseInt(elMan.value.replace(/[^0-9]/g, '')) || 0;
+            opTurnoTarde  = parseInt(elTar.value.replace(/[^0-9]/g, '')) || 0;
+            elMan.value = opTurnoManana > 0 ? opTurnoManana : '';
+            elTar.value = opTurnoTarde > 0 ? opTurnoTarde : '';
+
+            calcularCuadreMeta280();
+            sincronizarDiaActualEnDashboardMes();
+            renderizarHoja2DashboardMes();
+            guardarEstadoGeneralEnStorage();
+        }
+
+        function calcularCuadreMeta280() {
+            const cantReg = listaMovimientosHoja1.length;
+            const totalDia = opTurnoManana + opTurnoTarde + cantReg;
+            const diferencia = totalDia - metaDiariaObjetivo;
+
+            document.getElementById('display-op-clientes').innerText = cantReg;
+            document.getElementById('display-total-operaciones').innerText = totalDia;
+            document.getElementById('lblMetaActiva').innerText = metaDiariaObjetivo;
+
+            const panel = document.getElementById('panelFinalCierre');
+
+            if (totalDia === 0) {
+                panel.className = 'panel-resultado estado-esperando';
+                setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'esperando', 'ESPERANDO CONTEO...', '0');
+            } else if (diferencia >= 0) {
+                panel.className = 'panel-resultado estado-exacto';
+                const signo = diferencia > 0 ? `+${diferencia}` : '0';
+                setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'exacto', 'META DIARIA CUMPLIDA', signo);
+            } else {
+                panel.className = 'panel-resultado estado-faltante';
+                setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'faltante', 'DIFERENCIA PARA LA META', `-${Math.abs(diferencia)}`);
+            }
+        }
+
+        function sincronizarDiaActualEnDashboardMes() {
+            const fechaHoy = obtenerFechaHoyStr();
+            const cantReg = listaMovimientosHoja1.length;
+            const totalDia = opTurnoManana + opTurnoTarde + cantReg;
+
+            const filaDia = {
+                fecha: fechaHoy,
+                manana: opTurnoManana,
+                tarde: opTurnoTarde,
+                registradas: cantReg,
+                total: totalDia,
+                meta: metaDiariaObjetivo
+            };
+
+            const idx = listaDashboardMensual.findIndex(d => d.fecha === fechaHoy);
+            if (idx >= 0) {
+                listaDashboardMensual[idx] = filaDia;
+            } else if (totalDia > 0) {
+                listaDashboardMensual.push(filaDia);
+            }
+        }
+
+        function ejecutarGuardadoTurnosConEnter(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            vibrarRapido([18, 25, 18]);
+            sincronizarDiaActualEnDashboardMes();
+            renderizarHoja2DashboardMes();
+            guardarEstadoGeneralEnStorage();
+
+            const panel = document.getElementById('panelFinalCierre');
+            panel.className = 'panel-resultado estado-exacto';
+            const tot = opTurnoManana + opTurnoTarde + listaMovimientosHoja1.length;
+            setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'exacto', '✓ DÍA GUARDADO EN HOJA 2', tot);
+            setTimeout(() => calcularCuadreMeta280(), 950);
+            return false;
+        }
+
+        function borrarTurnosEditados() {
+            vibrarRapido([20, 30, 20]);
+            opTurnoManana = 0;
+            opTurnoTarde = 0;
+            document.getElementById('input-turno-manana').value = '';
+            document.getElementById('input-turno-tarde').value = '';
+            calcularCuadreMeta280();
+            sincronizarDiaActualEnDashboardMes();
+            renderizarHoja2DashboardMes();
+            guardarEstadoGeneralEnStorage();
+        }
+
+        function cambiarMetaDiariaPrompt() {
+            const nueva = prompt('Meta diaria de operaciones:', metaDiariaObjetivo);
+            if (nueva !== null) {
+                const num = parseInt(nueva.replace(/[^0-9]/g, ''));
+                if (!isNaN(num) && num > 0) {
+                    metaDiariaObjetivo = num;
+                    localStorage.setItem('bcp_meta_diaria_v3', metaDiariaObjetivo);
+                    calcularCuadreMeta280();
+                    sincronizarDiaActualEnDashboardMes();
+                    renderizarHoja2DashboardMes();
+                }
+            }
+        }
+
+        /* ===============================================================
+           RENDERIZADO DE LAS 3 HOJAS (MOVIMIENTOS, DASHBOARD 280, PERSONAS)
+           =============================================================== */
+        function actualizarVistasYControl280() {
+            sincronizarDiaActualEnDashboardMes();
+            calcularCuadreMeta280();
+            renderizarHoja1Movimientos();
+            renderizarHoja2DashboardMes();
+            renderizarHoja3BaseDatos();
+            guardarEstadoGeneralEnStorage();
+        }
+
+        function renderizarHoja1Movimientos() {
+            const badge = document.getElementById('badgeCantMovimientos');
+            const lblOps = document.getElementById('hoja1-total-ops');
+            const lblMonto = document.getElementById('hoja1-monto-acumulado');
+            const cont = document.getElementById('contenedorFilasMovimientos');
+
+            let sumaMontosAbs = 0;
+            listaMovimientosHoja1.forEach(m => { sumaMontosAbs += Math.abs(Number(m.monto) || 0); });
+
+            if (badge) badge.innerText = listaMovimientosHoja1.length;
+            if (lblOps) lblOps.innerText = `${listaMovimientosHoja1.length} OP`;
+            if (lblMonto) lblMonto.innerText = `S/ ${formatoSoles(sumaMontosAbs)}`;
+            if (!cont) return;
+
+            if (listaMovimientosHoja1.length === 0) {
+                cont.innerHTML = `<div style="padding:36px 16px; text-align:center; color:#64748b; font-size:13px; font-weight:800;">Sin movimientos registrados hoy.</div>`;
+                return;
+            }
+
+            let html = '';
+            for (let i = listaMovimientosHoja1.length - 1; i >= 0; i--) {
+                const item = listaMovimientosHoja1[i];
+                const numOp = item.numOp || (i + 1);
+                const esRetiro = Number(item.monto) < 0;
+                const colorMonto = esRetiro ? '#dc2626' : '#0f172a';
+                const signo = esRetiro ? `- ${formatoSoles(item.monto)}` : formatoSoles(item.monto);
+
+                html += `
+                    <div class="fila-mov-item">
+                        <div><span class="mov-col-num">#${numOp}</span></div>
+                        <div style="font-size:11px; font-weight:800; color:#64748b;">${item.hora || '--:--'}</div>
+                        <div style="padding-right:4px;">
+                            <div style="font-weight:900; color:#0f172a;">${item.personaNombre || 'General'}</div>
+                            <div style="font-size:10.5px; font-weight:800; color:#475569;">DNI: ${item.personaDni || '--'} · <span style="color:${esRetiro ? '#dc2626' : 'var(--bcp-blue)'};">${item.tipo}</span></div>
+                        </div>
+                        <div style="text-align:right; font-weight:900; font-size:14.5px; color:${colorMonto};">${signo}</div>
+                    </div>`;
+            }
+            cont.innerHTML = html;
+        }
+
+        function renderizarHoja2DashboardMes() {
+            const cont = document.getElementById('contenedorFilasDashboardMes');
+            const lblProm = document.getElementById('hoja2-promedio-mes');
+            const lblCump = document.getElementById('hoja2-dias-cumplidos');
+            if (!cont) return;
+
+            const cantDias = listaDashboardMensual.length;
+            let sumaTotalMes = 0;
+            let cumplidos = 0;
+
+            listaDashboardMensual.forEach(d => {
+                sumaTotalMes += (d.total || 0);
+                if ((d.total || 0) >= (d.meta || 280)) cumplidos++;
+            });
+
+            if (lblProm) lblProm.innerText = `${cantDias > 0 ? Math.round(sumaTotalMes / cantDias) : 0} OP`;
+            if (lblCump) lblCump.innerText = `${cumplidos} / ${cantDias}`;
+
+            if (cantDias === 0) {
+                cont.innerHTML = `<div style="padding:36px 16px; text-align:center; color:#64748b; font-size:13px; font-weight:800;">Sin registros en el mes.</div>`;
+                return;
+            }
+
+            let html = '';
+            for (let i = listaDashboardMensual.length - 1; i >= 0; i--) {
+                const d = listaDashboardMensual[i];
+                const dif = (d.total || 0) - (d.meta || 280);
+                const ok = dif >= 0;
+                html += `
+                    <div class="fila-mes-item">
+                        <div style="color:#0f172a; font-weight:900;">${d.fecha.substring(0, 5)}</div>
+                        <div style="color:#475569;">${d.manana || 0}</div>
+                        <div style="color:#475569;">${d.tarde || 0}</div>
+                        <div style="color:var(--bcp-blue); font-weight:900;">${d.registradas || 0}</div>
+                        <div style="color:#0f172a; font-weight:900;">${d.total || 0}</div>
+                        <div>
+                            <span style="padding:2px 6px; border-radius:5px; font-size:10.5px; font-weight:900; background:${ok ? '#dcfce7' : '#fee2e2'}; color:${ok ? '#15803d' : '#dc2626'};">
+                                ${ok ? (dif > 0 ? '+' + dif : 'EXACTO') : dif}
+                            </span>
+                        </div>
+                    </div>`;
+            }
+            cont.innerHTML = html;
+        }
+
+        function renderizarHoja3BaseDatos() {
+            const badge = document.getElementById('badgeCantPersonas');
+            const cont = document.getElementById('contenedorFilasPersonas');
+            const filtro = (document.getElementById('inputBuscarPersona')?.value || '').toLowerCase().trim();
+
+            if (badge) badge.innerText = baseDatosPersonas.length;
+            if (!cont) return;
+
+            let html = '';
+            baseDatosPersonas.forEach(p => {
+                if (filtro && !p.nombre.toLowerCase().includes(filtro) && !String(p.dni).includes(filtro)) return;
+
+                const cantOpsPersona = listaMovimientosHoja1.filter(m => m.personaId === p.id).length;
+                html += `
+                    <div class="fila-mov-item" style="grid-template-columns: 1.2fr 96px 56px 76px;">
+                        <div onclick="invocarPersonaDesdeHoja3('${p.id}')" style="cursor:pointer;">
+                            <div style="font-weight:900; color:var(--bcp-blue);">${p.nombre}</div>
+                            <div style="font-size:10.5px; color:#64748b; font-weight:800;">${p.cuenta || 'Sin cuenta'}</div>
+                        </div>
+                        <div style="font-weight:900; color:#0f172a; font-size:12.5px;" onclick="copiarTextoSimple('${p.dni}')" title="Toca para copiar DNI">
+                            ${p.dni || '--------'}
+                        </div>
+                        <div style="text-align:center; font-weight:900; color:#334155;">${cantOpsPersona}</div>
+                        <div style="text-align:right; display:flex; gap:4px; justify-content:flex-end;">
+                            <button type="button" onclick="abrirModalPersona('${p.id}')" style="padding:4px 7px; border:1px solid #cbd5e1; background:#f8fafc; border-radius:5px; cursor:pointer; font-size:11px; font-weight:900;">✏️</button>
+                            <button type="button" onclick="invocarPersonaDesdeHoja3('${p.id}')" style="padding:4px 7px; border:none; background:var(--bcp-blue); color:#fff; border-radius:5px; cursor:pointer; font-size:10.5px; font-weight:900;">USAR</button>
+                        </div>
+                    </div>`;
+            });
+
+            cont.innerHTML = html || `<div style="padding:28px; text-align:center; color:#64748b; font-weight:800;">No se encontraron resultados.</div>`;
+        }
+
+        function invocarPersonaDesdeHoja3(id) {
+            personaActivaId = id;
+            contextoPrincipal = 'caja';
+            localStorage.setItem('bcp_contexto_activo_v3', 'caja');
+            renderizarSelectorPersonas();
+            actualizarEstiloVisualModo();
+            calcularTodoCaja();
+            actualizarAparienciaGoogleSwitcher();
+            switchMainApp('app-caja');
+            enfocarSiguienteInputVisible('app-caja');
+        }
+
+        function copiarTextoSimple(txt) {
+            if (!txt) return;
+            vibrarRapido(14);
+            const limpio = String(txt).replace(/[^0-9]/g, '');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(limpio).catch(() => {});
+            }
+        }
+
+        /* ===============================================================
+           MODAL DE REGISTRO DE PERSONA (TECLADOS CONTEXTUALES)
+           =============================================================== */
+        function abrirModalPersona(idEditar = null) {
+            vibrarRapido(12);
+            const modal = document.getElementById('modalPersona');
+            const btnElim = document.getElementById('btnEliminarPerModal');
+
+            if (idEditar) {
+                const per = baseDatosPersonas.find(p => p.id === idEditar);
+                if (!per) return;
+                document.getElementById('tituloModalPersona').innerText = '✏️ Editar Persona';
+                document.getElementById('editPersonaId').value = per.id;
+                document.getElementById('inpPerNombre').value = per.nombre || '';
+                document.getElementById('inpPerDni').value = per.dni || '';
+                document.getElementById('inpPerCuenta').value = per.cuenta || '';
+                btnElim.style.display = baseDatosPersonas.length > 1 ? 'block' : 'none';
+            } else {
+                document.getElementById('tituloModalPersona').innerText = '👤 Registrar Persona';
+                document.getElementById('editPersonaId').value = '';
+                document.getElementById('inpPerNombre').value = '';
+                document.getElementById('inpPerDni').value = '';
+                document.getElementById('inpPerCuenta').value = '';
+                btnElim.style.display = 'none';
+            }
+            modal.classList.add('active');
+            setTimeout(() => document.getElementById('inpPerNombre').focus(), 40);
+        }
+
+        function cerrarModalPersona() {
+            document.getElementById('modalPersona').classList.remove('active');
+            if (document.getElementById('app-caja').classList.contains('active-app')) {
+                enfocarSiguienteInputVisible('app-caja');
+            }
+        }
+
+        function guardarPersonaEnBaseDatos(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const idEdit = document.getElementById('editPersonaId').value;
+            const nombre = document.getElementById('inpPerNombre').value.trim();
+            const dniFormateado = normalizarDniConVerificador(document.getElementById('inpPerDni').value);
+            const cuenta = document.getElementById('inpPerCuenta').value.trim();
+
+            if (!nombre) {
+                document.getElementById('inpPerNombre').focus();
+                return false;
+            }
+
+            if (idEdit) {
+                const idx = baseDatosPersonas.findIndex(p => p.id === idEdit);
+                if (idx >= 0) {
+                    baseDatosPersonas[idx] = { id: idEdit, nombre, dni: dniFormateado, cuenta };
+                }
+            } else {
+                const nuevoId = 'per_' + Date.now();
+                baseDatosPersonas.push({ id: nuevoId, nombre, dni: dniFormateado, cuenta });
+                personaActivaId = nuevoId;
+            }
+
+            vibrarRapido(18);
+            renderizarSelectorPersonas();
+            actualizarEstiloVisualModo();
+            calcularTodoCaja();
+            renderizarHoja3BaseDatos();
+            guardarEstadoGeneralEnStorage();
+            cerrarModalPersona();
+            return false;
+        }
+
+        function eliminarPersonaDeBaseDatos() {
+            const idEdit = document.getElementById('editPersonaId').value;
+            if (!idEdit || baseDatosPersonas.length <= 1) return;
+            baseDatosPersonas = baseDatosPersonas.filter(p => p.id !== idEdit);
+            personaActivaId = baseDatosPersonas[0].id;
+            renderizarSelectorPersonas();
+            actualizarEstiloVisualModo();
+            calcularTodoCaja();
+            renderizarHoja3BaseDatos();
+            guardarEstadoGeneralEnStorage();
+            cerrarModalPersona();
+        }
+
+        /* ===============================================================
+           EXPORTACIÓN A .XLSX BINARIO REAL DE 3 HOJAS (OPENXML + CRC32)
+           =============================================================== */
+        const TABLA_CRC32 = (() => {
+            const t = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                t[i] = c >>> 0;
+            }
+            return t;
+        })();
+
+        function calcularCRC32(bytes) {
+            let crc = 0xFFFFFFFF;
+            for (let i = 0; i < bytes.length; i++) crc = TABLA_CRC32[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+            return (crc ^ 0xFFFFFFFF) >>> 0;
+        }
+
+        function crearArchivoZipUint8(archivos) {
+            const encoder = new TextEncoder();
+            const registrosLocales = [];
+            const registrosCentrales = [];
+            let offsetActual = 0;
+
+            archivos.forEach(item => {
+                const nombreBytes = encoder.encode(item.nombre);
+                const dataBytes = (typeof item.contenido === 'string') ? encoder.encode(item.contenido) : item.contenido;
+                const crc = calcularCRC32(dataBytes);
+                const tam = dataBytes.length;
+
+                const localHeader = new Uint8Array(30 + nombreBytes.length);
+                const lv = new DataView(localHeader.buffer);
+                lv.setUint32(0, 0x04034b50, true);
+                lv.setUint16(4, 20, true);
+                lv.setUint16(6, 0x0800, true);
+                lv.setUint16(8, 0, true);
+                lv.setUint16(12, 0x2100, true);
+                lv.setUint32(14, crc, true);
+                lv.setUint32(18, tam, true);
+                lv.setUint32(22, tam, true);
+                lv.setUint16(26, nombreBytes.length, true);
+                localHeader.set(nombreBytes, 30);
+                registrosLocales.push(localHeader, dataBytes);
+
+                const centralHeader = new Uint8Array(46 + nombreBytes.length);
+                const cv = new DataView(centralHeader.buffer);
+                cv.setUint32(0, 0x02014b50, true);
+                cv.setUint16(4, 20, true);
+                cv.setUint16(6, 20, true);
+                cv.setUint16(8, 0x0800, true);
+                cv.setUint16(14, 0x2100, true);
+                cv.setUint32(16, crc, true);
+                cv.setUint32(20, tam, true);
+                cv.setUint32(24, tam, true);
+                cv.setUint16(28, nombreBytes.length, true);
+                cv.setUint32(42, offsetActual, true);
+                centralHeader.set(nombreBytes, 46);
+                registrosCentrales.push(centralHeader);
+
+                offsetActual += localHeader.length + dataBytes.length;
+            });
+
+            const offsetCentral = offsetActual;
+            let tamCentral = 0;
+            registrosCentrales.forEach(c => tamCentral += c.length);
+
+            const endRecord = new Uint8Array(22);
+            const ev = new DataView(endRecord.buffer);
+            ev.setUint32(0, 0x06054b50, true);
+            ev.setUint16(8, archivos.length, true);
+            ev.setUint16(10, archivos.length, true);
+            ev.setUint32(12, tamCentral, true);
+            ev.setUint32(16, offsetCentral, true);
+
+            const salida = new Uint8Array(offsetCentral + tamCentral + 22);
+            let pos = 0;
+            registrosLocales.forEach(arr => { salida.set(arr, pos); pos += arr.length; });
+            registrosCentrales.forEach(arr => { salida.set(arr, pos); pos += arr.length; });
+            salida.set(endRecord, pos);
+            return salida;
+        }
+
+        function escaparXml(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function colLetraExcel(idx1) {
+            let s = '', n = idx1;
+            while (n > 0) {
+                let m = (n - 1) % 26;
+                s = String.fromCharCode(65 + m) + s;
+                n = Math.floor((n - m) / 26);
+            }
+            return s;
+        }
+
+        function construirXmlHojaExcel(filas, anchosCol) {
+            let colsXml = '<cols>';
+            anchosCol.forEach((w, idx) => {
+                colsXml += `<col min="${idx + 1}" max="${idx + 1}" width="${w}" customWidth="1"/>`;
+            });
+            colsXml += '</cols><sheetData>';
+
+            filas.forEach((celdas, rIdx) => {
+                const numFila = rIdx + 1;
+                colsXml += `<row r="${numFila}" ht="20" customHeight="1">`;
+                celdas.forEach((celda, cIdx) => {
+                    if (!celda) return;
+                    const ref = `${colLetraExcel(cIdx + 1)}${numFila}`;
+                    const st = celda.s !== undefined ? ` s="${celda.s}"` : '';
+                    if (celda.t === 'n') {
+                        colsXml += `<c r="${ref}"${st}><v>${Number(celda.v) || 0}</v></c>`;
+                    } else {
+                        colsXml += `<c r="${ref}" t="inlineStr"${st}><is><t>${escaparXml(celda.v)}</t></is></c>`;
+                    }
+                });
+                colsXml += `</row>`;
+            });
+            colsXml += '</sheetData>';
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${colsXml}</worksheet>`;
+        }
+
+        async function exportarHojasBcpXlsx() {
+            vibrarRapido([18, 25, 18]);
+            sincronizarDiaActualEnDashboardMes();
+
+            const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+    <numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00;[Red]-#,##0.00"/></numFmts>
+    <fonts count="4">
+        <font><sz val="11"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
+        <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+        <font><b/><sz val="11"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
+        <font><b/><sz val="11"/><color rgb="FFDC2626"/><name val="Calibri"/></font>
+    </fonts>
+    <fills count="3">
+        <fill><patternFill patternType="none"/></fill>
+        <fill><patternFill patternType="gray125"/></fill>
+        <fill><patternFill patternType="solid"><fgColor rgb="FF002A8D"/></patternFill></fill>
+    </fills>
+    <borders count="2">
+        <border><left/><right/><top/><bottom/><diagonal/></border>
+        <border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/><diagonal/></border>
+    </borders>
+    <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+    <cellXfs count="5">
+        <xf numFmtId="0" fontId="0" fillId="0" borderId="1" applyBorder="1"/>
+        <xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/>
+        <xf numFmtId="0" fontId="2" fillId="0" borderId="1" applyFont="1" applyBorder="1"/>
+        <xf numFmtId="164" fontId="2" fillId="0" borderId="1" applyNumberFormat="1" applyFont="1" applyBorder="1"/>
+        <xf numFmtId="164" fontId="3" fillId="0" borderId="1" applyNumberFormat="1" applyFont="1" applyBorder="1"/>
+    </cellXfs>
+</styleSheet>`;
+
+            // Hoja 1: Movimientos
+            const filasH1 = [
+                [{ v: 'HOJA 1 - MOVIMIENTOS DE CLIENTES AGENTE BCP', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'N° OP', s: 1 }, { v: 'FECHA', s: 1 }, { v: 'HORA', s: 1 }, { v: 'NOMBRE PERSONA', s: 1 }, { v: 'DNI (8+1)', s: 1 }, { v: 'OPERACIÓN', s: 1 }, { v: 'MONTO (S/)', s: 1 }]
+            ];
+            for (let i = listaMovimientosHoja1.length - 1; i >= 0; i--) {
+                const m = listaMovimientosHoja1[i];
+                const esNeg = Number(m.monto) < 0;
+                filasH1.push([
+                    { v: `#${m.numOp || (i + 1)}`, s: 2 },
+                    { v: m.fecha || '', s: 0 },
+                    { v: m.hora || '', s: 0 },
+                    { v: m.personaNombre || '', s: 2 },
+                    { v: m.personaDni || '', s: 2 },
+                    { v: m.tipo || '', s: 0 },
+                    { t: 'n', v: Number(m.monto) || 0, s: esNeg ? 4 : 3 }
+                ]);
+            }
+
+            // Hoja 2: Dashboard 280
+            const filasH2 = [
+                [{ v: 'HOJA 2 - DASHBOARD MENSUAL META 280 OPERACIONES', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'FECHA', s: 1 }, { v: 'TURNO MAÑANA', s: 1 }, { v: 'TURNO TARDE', s: 1 }, { v: 'OP. CLIENTES', s: 1 }, { v: 'TOTAL DÍA', s: 1 }, { v: 'META', s: 1 }, { v: 'DIFERENCIA', s: 1 }]
+            ];
+            listaDashboardMensual.forEach(d => {
+                const dif = (d.total || 0) - (d.meta || 280);
+                filasH2.push([
+                    { v: d.fecha, s: 2 },
+                    { t: 'n', v: d.manana || 0, s: 0 },
+                    { t: 'n', v: d.tarde || 0, s: 0 },
+                    { t: 'n', v: d.registradas || 0, s: 2 },
+                    { t: 'n', v: d.total || 0, s: 2 },
+                    { t: 'n', v: d.meta || 280, s: 0 },
+                    { t: 'n', v: dif, s: 2 }
+                ]);
+            });
+
+            // Hoja 3: Base de Datos de Personas
+            const filasH3 = [
+                [{ v: 'HOJA 3 - BASE DE DATOS DE PERSONAS', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'NOMBRE', s: 1 }, { v: 'DNI (8 + VERIFICADOR)', s: 1 }, { v: 'CELULAR / CUENTA', s: 1 }, { v: 'CANT. OPERACIONES', s: 1 }]
+            ];
+            baseDatosPersonas.forEach(p => {
+                const ops = listaMovimientosHoja1.filter(m => m.personaId === p.id).length;
+                filasH3.push([
+                    { v: p.nombre, s: 2 },
+                    { v: p.dni || '', s: 2 },
+                    { v: p.cuenta || '', s: 0 },
+                    { t: 'n', v: ops, s: 2 }
+                ]);
+            });
+
+            const sheet1Xml = construirXmlHojaExcel(filasH1, [10, 14, 12, 24, 16, 16, 16]);
+            const sheet2Xml = construirXmlHojaExcel(filasH2, [14, 16, 16, 16, 14, 12, 14]);
+            const sheet3Xml = construirXmlHojaExcel(filasH3, [26, 20, 24, 18]);
+
+            const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    <Default Extension="xml" ContentType="application/xml"/>
+    <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+    <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+    <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+    <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+    <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+            const relsRootXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+            const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    <sheets>
+        <sheet name="Hoja 1 - Movimientos" sheetId="1" r:id="rId1"/>
+        <sheet name="Hoja 2 - Dashboard 280" sheetId="2" r:id="rId2"/>
+        <sheet name="Hoja 3 - Base de Datos" sheetId="3" r:id="rId3"/>
+    </sheets>
+</workbook>`;
+
+            const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
+    <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+            const bytesZip = crearArchivoZipUint8([
+                { nombre: '[Content_Types].xml', contenido: contentTypesXml },
+                { nombre: '_rels/.rels', contenido: relsRootXml },
+                { nombre: 'xl/workbook.xml', contenido: workbookXml },
+                { nombre: 'xl/_rels/workbook.xml.rels', contenido: workbookRelsXml },
+                { nombre: 'xl/styles.xml', contenido: stylesXml },
+                { nombre: 'xl/worksheets/sheet1.xml', contenido: sheet1Xml },
+                { nombre: 'xl/worksheets/sheet2.xml', contenido: sheet2Xml },
+                { nombre: 'xl/worksheets/sheet3.xml', contenido: sheet3Xml }
+            ]);
+
+            const blob = new Blob([bytesZip], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const nombreArchivo = 'BCP_Movimientos_y_Control280.xlsx';
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nombreArchivo;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+            try {
+                if (navigator.canShare && typeof File !== 'undefined') {
+                    const archivoCompartir = new File([blob], nombreArchivo, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    if (navigator.canShare({ files: [archivoCompartir] })) {
+                        await navigator.share({ title: 'Hojas BCP', files: [archivoCompartir] });
+                    }
+                }
+            } catch (e) {}
+        }
+
+        /* ===============================================================
+           NAVEGACIÓN, BOTONES REUBICABLES Y CONMUTADOR 2D
+           =============================================================== */
+        function handleScrollIndicators(scrollId, dot1Id, dot2Id) {
+            const el = document.getElementById(scrollId);
+            if (!el) return;
+            const esPag2 = el.scrollLeft > (el.clientWidth / 2);
+            document.getElementById(dot1Id).classList.toggle('active', !esPag2);
+            document.getElementById(dot2Id).classList.toggle('active', esPag2);
+        }
+
+        function scrollPaginacionDirecta(scrollContainerId, pageNum) {
+            const el = document.getElementById(scrollContainerId);
+            if (!el) return;
+            el.scrollTo({ left: pageNum === 1 ? 0 : el.clientWidth, behavior: 'smooth' });
+            vibrarRapido();
+        }
+
+        function switchMainApp(appId) {
+            document.querySelectorAll('.main-app-container').forEach(s => s.classList.remove('active-app'));
+            document.getElementById(appId).classList.add('active-app');
+            window.scrollTo(0, 0);
+
+            const ocultarFlotantes = (appId === 'app-hojas');
+            document.getElementById('btnGoogleSwitcher').classList.toggle('oculto', ocultarFlotantes);
+
+            const mostrarAuxCaja = (appId === 'app-caja');
+            ['btnCajaBorrar', 'btnCajaMovimientos', 'btnCajaAnular'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('oculto', !mostrarAuxCaja);
+            });
+
+            if (appId === 'app-caja') setTimeout(posicionarBotonesAuxiliaresCajaPorDefecto, 20);
+            verificarSiTecladoTapaElementosFijos();
+        }
+
+        function actualizarAparienciaGoogleSwitcher() {
+            const btn = document.getElementById('btnGoogleSwitcher');
+            const lbl = document.getElementById('lblSwitcherModo');
+            const esCierre = (contextoPrincipal === 'cierre');
+            btn.classList.toggle('modo-cierre-activo', esCierre);
+            lbl.innerText = esCierre ? 'META' : 'CAJA';
+        }
+
+        function conmutarEntreCajaYCierre() {
+            vibrarRapido(16);
+            const btn = document.getElementById('btnGoogleSwitcher');
+            btn.classList.add('rotando');
+            setTimeout(() => btn.classList.remove('rotando'), 280);
+
+            if (contextoPrincipal === 'caja') {
+                guardarValoresModoActual();
+                contextoPrincipal = 'cierre';
+                localStorage.setItem('bcp_contexto_activo_v3', 'cierre');
+                actualizarAparienciaGoogleSwitcher();
+                calcularCuadreMeta280();
+                switchMainApp('app-cierre');
+                enfocarSiguienteInputVisible('app-cierre');
+            } else {
+                contextoPrincipal = 'caja';
+                localStorage.setItem('bcp_contexto_activo_v3', 'caja');
+                actualizarAparienciaGoogleSwitcher();
+                switchMainApp('app-caja');
+                enfocarSiguienteInputVisible('app-caja');
+            }
+        }
+
+        function abrirPantallaHojas(numHoja = 1) {
+            vibrarRapido(14);
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+            actualizarVistasYControl280();
+            switchMainApp('app-hojas');
+            setTimeout(() => cambiarPestanaHojas(numHoja, true), 15);
+        }
+
+        function cerrarPantallaHojas() {
+            vibrarRapido(12);
+            if (contextoPrincipal === 'cierre') {
+                switchMainApp('app-cierre');
+                enfocarSiguienteInputVisible('app-cierre');
+            } else {
+                switchMainApp('app-caja');
+                enfocarSiguienteInputVisible('app-caja');
+            }
+        }
+
+        function cambiarPestanaHojas(numHoja, instantaneo = false) {
+            hojaActivaActual = numHoja;
+            const slider = document.getElementById('sliderHojasBcp');
+            if (!slider) return;
+
+            esTransicionClickHoja = true;
+            clearTimeout(timerTransicionHoja);
+
+            [1, 2, 3].forEach(n => {
+                document.getElementById(`tab-btn-hoja${n}`).classList.toggle('active', n === numHoja);
+            });
+
+            slider.scrollTo({
+                left: (numHoja - 1) * slider.clientWidth,
+                behavior: instantaneo ? 'instant' : 'smooth'
+            });
+
+            timerTransicionHoja = setTimeout(() => { esTransicionClickHoja = false; }, 260);
+        }
+
+        function handleScrollHojasBcp() {
+            if (esTransicionClickHoja) return;
+            const slider = document.getElementById('sliderHojasBcp');
+            if (!slider || slider.clientWidth === 0) return;
+            const idx = Math.round(slider.scrollLeft / slider.clientWidth) + 1;
+            if (idx !== hojaActivaActual && idx >= 1 && idx <= 3) {
+                hojaActivaActual = idx;
+                [1, 2, 3].forEach(n => {
+                    document.getElementById(`tab-btn-hoja${n}`).classList.toggle('active', n === idx);
+                });
+            }
+        }
+
+        function accionBorrarHojaActiva() {
+            vibrarRapido([20, 30, 20]);
+            if (hojaActivaActual === 1) {
+                listaMovimientosHoja1 = [];
+            } else if (hojaActivaActual === 2) {
+                listaDashboardMensual = [];
+            }
+            actualizarVistasYControl280();
+        }
+
+        function ejecutarBotonBorrarCaja() {
+            vibrarRapido([15, 25, 15]);
+            limpiarCaja();
+            const btn = document.getElementById('btnCajaBorrar');
+            const lbl = document.getElementById('txtBtnCajaBorrar');
+            btn.classList.add('confirmado');
+            lbl.innerText = 'LIMPIO';
+            setTimeout(() => {
+                btn.classList.remove('confirmado');
+                lbl.innerText = 'BORRAR';
+                enfocarSiguienteInputVisible('app-caja');
+            }, 600);
+        }
+
+        function ejecutarBotonAnularUltimaOperacion() {
+            vibrarRapido([25, 35, 25]);
+            const btn = document.getElementById('btnCajaAnular');
+            const lbl = document.getElementById('txtBtnCajaAnular');
+            const badge = document.getElementById('badgeOperacion');
+
+            if (listaMovimientosHoja1.length > 0) {
+                const elim = listaMovimientosHoja1.pop();
+                recalcularCorrelativosMovimientos();
+                actualizarVistasYControl280();
+                btn.classList.add('confirmado');
+                lbl.innerText = 'ANULADO';
+                badge.innerText = `↩️ ANULADA OP #${elim.numOp} (${elim.personaNombre})`;
+            } else {
+                btn.classList.add('confirmado');
+                lbl.innerText = 'VACÍO';
+                badge.innerText = 'ℹ️ SIN OPERACIONES PARA ANULAR';
+            }
+
+            setTimeout(() => {
+                btn.classList.remove('confirmado');
+                lbl.innerText = 'ANULAR';
+                actualizarEstiloVisualModo();
+                enfocarSiguienteInputVisible('app-caja');
+            }, 850);
+        }
+
+        function enfocarSiguienteInputVisible(containerId) {
+            if (document.getElementById('app-hojas').classList.contains('active-app')) return;
+            if (document.getElementById('modalPersona').classList.contains('active')) return;
+
+            if (containerId === 'app-caja') {
+                if (ultimoInputCajaActivo) {
+                    const rec = document.getElementById(ultimoInputCajaActivo);
+                    if (rec && rec.offsetParent !== null) {
+                        rec.focus({ preventScroll: true });
+                        return;
+                    }
+                }
+                const inputs = document.querySelectorAll('#swipeMontos input');
+                for (let i = 0; i < inputs.length; i++) {
+                    if (inputs[i].offsetParent !== null && inputs[i].value === '') {
+                        inputs[i].focus({ preventScroll: true });
+                        ultimoInputCajaActivo = inputs[i].id;
+                        return;
+                    }
+                }
+                if (inputs.length > 0) {
+                    inputs[0].focus({ preventScroll: true });
+                    ultimoInputCajaActivo = inputs[0].id;
+                }
+            } else if (containerId === 'app-cierre') {
+                const recCierre = document.getElementById(ultimoInputCierreActivo);
+                if (recCierre) {
+                    recCierre.focus({ preventScroll: true });
+                    return;
+                }
+                const man = document.getElementById('input-turno-manana');
+                if (man) man.focus({ preventScroll: true });
+            }
+        }
+
+        function posicionarBotonesAuxiliaresCajaPorDefecto() {
+            const b1 = document.getElementById('btnCajaBorrar');
+            const b2 = document.getElementById('btnCajaMovimientos');
+            const b3 = document.getElementById('btnCajaAnular');
+            const gridRef = document.getElementById('gridSelectorModos');
+            if (!b1 || !b2 || !b3 || !gridRef) return;
+
+            const rect = gridRef.getBoundingClientRect();
+            if (rect.width > 0) {
+                const wUnit = Math.floor((rect.width - 10) / 3);
+                b1.style.width = wUnit + 'px';
+                b2.style.width = wUnit + 'px';
+                b3.style.width = wUnit + 'px';
+
+                const topDef = Math.min(altoPantallaSinTeclado - 48, Math.round(rect.bottom + 7));
+
+                b1.style.left = localStorage.getItem('bcp_btn_borrar_x_v3') || Math.round(rect.left) + 'px';
+                b1.style.top  = localStorage.getItem('bcp_btn_borrar_y_v3') || topDef + 'px';
+
+                b2.style.left = localStorage.getItem('bcp_btn_movs_x_v3') || Math.round(rect.left + wUnit + 5) + 'px';
+                b2.style.top  = localStorage.getItem('bcp_btn_movs_y_v3') || topDef + 'px';
+
+                b3.style.left = localStorage.getItem('bcp_btn_anular_x_v3') || Math.round(rect.left + (wUnit + 5) * 2) + 'px';
+                b3.style.top  = localStorage.getItem('bcp_btn_anular_y_v3') || topDef + 'px';
+            }
+        }
+
+        function configurarBotonEstaticoReubicable(btnId, keyX, keyY, callbackClick) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            let startX = 0, startY = 0, initL = 0, initT = 0, mover = false, timer = null;
+
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                startX = e.clientX; startY = e.clientY;
+                const r = btn.getBoundingClientRect();
+                initL = r.left; initT = r.top;
+                mover = false;
+                btn.setPointerCapture(e.pointerId);
+                timer = setTimeout(() => {
+                    mover = true;
+                    btn.classList.add('modo-reubicacion');
+                    vibrarRapido(25);
+                }, 380);
+            });
+
+            btn.addEventListener('pointermove', (e) => {
+                if (!btn.hasPointerCapture(e.pointerId)) return;
+                const dx = e.clientX - startX, dy = e.clientY - startY;
+                if (!mover && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) clearTimeout(timer);
+                if (mover) {
+                    btn.style.left = Math.round(Math.max(4, Math.min(window.innerWidth - btn.offsetWidth - 4, initL + dx))) + 'px';
+                    btn.style.top  = Math.round(Math.max(4, Math.min(altoPantallaSinTeclado - btn.offsetHeight - 4, initT + dy))) + 'px';
+                }
+            });
+
+            btn.addEventListener('pointerup', (e) => {
+                clearTimeout(timer);
+                if (btn.hasPointerCapture(e.pointerId)) btn.releasePointerCapture(e.pointerId);
+                if (mover) {
+                    btn.classList.remove('modo-reubicacion');
+                    localStorage.setItem(keyX, btn.style.left);
+                    localStorage.setItem(keyY, btn.style.top);
+                } else {
+                    callbackClick();
+                }
+                mover = false;
+            });
+        }
+
+        function verificarSiTecladoTapaElementosFijos() {
+            const hVis = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            if (hVis > altoPantallaSinTeclado) altoPantallaSinTeclado = hVis;
+            const tecladoAbierto = hVis < (altoPantallaSinTeclado * 0.82);
+
+            const sw = document.getElementById('btnGoogleSwitcher');
+            if (sw) {
+                const topSw = parseFloat(sw.style.top) || 505;
+                sw.classList.toggle('tapado-por-teclado', tecladoAbierto && (topSw + 22 > hVis));
+            }
+            ['btnCajaBorrar', 'btnCajaMovimientos', 'btnCajaAnular'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const topEl = parseFloat(el.style.top) || 440;
+                    el.classList.toggle('tapado-por-teclado', tecladoAbierto && (topEl + 40 > hVis));
+                }
+            });
+        }
+
+        function inicializarGoogleSwitcher() {
+            const btn = document.getElementById('btnGoogleSwitcher');
+            let sx = parseFloat(localStorage.getItem('bcp_sw_x_v3')) || Math.round(window.innerWidth / 2);
+            let sy = parseFloat(localStorage.getItem('bcp_sw_y_v3')) || Math.min(altoPantallaSinTeclado - 28, 515);
+            btn.style.left = sx + 'px';
+            btn.style.top = sy + 'px';
+
+            let startX = 0, startY = 0, initX = sx, initY = sy, movio = false;
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                startX = e.clientX; startY = e.clientY;
+                initX = parseFloat(btn.style.left) || sx;
+                initY = parseFloat(btn.style.top) || sy;
+                movio = false;
+                btn.setPointerCapture(e.pointerId);
+            });
+            btn.addEventListener('pointermove', (e) => {
+                if (!btn.hasPointerCapture(e.pointerId)) return;
+                const dx = e.clientX - startX, dy = e.clientY - startY;
+                if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+                    movio = true;
+                    btn.style.left = Math.round(Math.max(26, Math.min(window.innerWidth - 26, initX + dx))) + 'px';
+                    btn.style.top  = Math.round(Math.max(26, Math.min(altoPantallaSinTeclado - 26, initY + dy))) + 'px';
+                }
+            });
+            btn.addEventListener('pointerup', (e) => {
+                if (!btn.hasPointerCapture(e.pointerId)) return;
+                btn.releasePointerCapture(e.pointerId);
+                if (movio) {
+                    localStorage.setItem('bcp_sw_x_v3', btn.style.left);
+                    localStorage.setItem('bcp_sw_y_v3', btn.style.top);
+                } else {
+                    conmutarEntreCajaYCierre();
+                }
+            });
+
+            configurarBotonEstaticoReubicable('btnCajaBorrar', 'bcp_btn_borrar_x_v3', 'bcp_btn_borrar_y_v3', ejecutarBotonBorrarCaja);
+            configurarBotonEstaticoReubicable('btnCajaMovimientos', 'bcp_btn_movs_x_v3', 'bcp_btn_movs_y_v3', () => abrirPantallaHojas(1));
+            configurarBotonEstaticoReubicable('btnCajaAnular', 'bcp_btn_anular_x_v3', 'bcp_btn_anular_y_v3', ejecutarBotonAnularUltimaOperacion);
+
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', verificarSiTecladoTapaElementosFijos);
+            window.addEventListener('resize', () => {
+                posicionarBotonesAuxiliaresCajaPorDefecto();
+                verificarSiTecladoTapaElementosFijos();
+            });
+        }
+
+        /* ===============================================================
+           INICIALIZACIÓN GENERAL
+           =============================================================== */
+        cargarDatosLocales();
+        renderizarSelectorPersonas();
+        inicializarGoogleSwitcher();
+        actualizarEstiloVisualModo();
+        restaurarValoresModoActual();
+        document.getElementById('input-turno-manana').value = opTurnoManana > 0 ? opTurnoManana : '';
+        document.getElementById('input-turno-tarde').value  = opTurnoTarde > 0 ? opTurnoTarde : '';
+        actualizarAparienciaGoogleSwitcher();
+        calcularTodoCaja();
+        actualizarVistasYControl280();
+
+        window.onload = () => {
+            posicionarBotonesAuxiliaresCajaPorDefecto();
+            if (contextoPrincipal === 'cierre') {
+                switchMainApp('app-cierre');
+                enfocarSiguienteInputVisible('app-cierre');
+            } else {
+                switchMainApp('app-caja');
+                enfocarSiguienteInputVisible('app-caja');
+            }
+            verificarSiTecladoTapaElementosFijos();
+        };
     </script>
 </body>
 </html>
