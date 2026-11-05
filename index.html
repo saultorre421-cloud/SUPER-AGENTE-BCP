@@ -1532,7 +1532,7 @@
         let opTurnoManana = 0;
         let opTurnoTarde  = 0;
 
-        let modoVistaGauge = 'hoy'; // 'hoy' o 'mes'
+        let modoVistaGauge = 'hoy';
         let hojaActivaActual = 1;
         let esTransicionClickHoja = false;
         let timerTransicionHoja = null;
@@ -1545,6 +1545,7 @@
         let sincronizandoAhora = false;
         let syncPendienteEnCola = false;
         let timerDebounceSync = null;
+        let flagPermitirVaciarHoy = false;
 
         const formatoSoles = (num) => Math.abs(Number(num) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1567,7 +1568,7 @@
         };
 
         /* ===============================================================
-           MOTOR DE SINCRONIZACIÓN ATÓMICA CON GOOGLE SHEETS (CERO DUPLICADOS)
+           MOTOR DE SINCRONIZACIÓN ATÓMICA CON GOOGLE SHEETS
            =============================================================== */
         function actualizarIndicadorCloudUI(estado, textoCorto, detalleLargo) {
             const pill = document.getElementById('pillSyncCaja');
@@ -1589,13 +1590,14 @@
             }
         }
 
-        function programarSincronizacionCloud(inmediato = false) {
+        function programarSincronizacionCloud(inmediato = false, permitirVaciar = false) {
+            if (permitirVaciar) flagPermitirVaciarHoy = true;
             localStorage.setItem(KEY_PENDIENTE_SYNC, 'true');
             clearTimeout(timerDebounceSync);
             if (inmediato) {
                 ejecutarSincronizacionCloud();
             } else {
-                timerDebounceSync = setTimeout(ejecutarSincronizacionCloud, 180);
+                timerDebounceSync = setTimeout(ejecutarSincronizacionCloud, 150);
             }
         }
 
@@ -1616,6 +1618,7 @@
             const payload = {
                 accion: 'sincronizar_todo',
                 fechaHoy: fechaHoy,
+                permitirVaciarHoy: flagPermitirVaciarHoy,
                 personas: baseDatosPersonas,
                 movimientosHoy: listaMovimientosHoja1,
                 resumenDia: {
@@ -1631,27 +1634,33 @@
             try {
                 const resp = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
+                    redirect: 'follow',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
 
-                const data = await resp.json();
+                const textoResp = await resp.text();
+                const data = JSON.parse(textoResp);
+
                 if (data && data.ok) {
+                    flagPermitirVaciarHoy = false;
                     localStorage.setItem(KEY_PENDIENTE_SYNC, 'false');
-                    // Actualizar historial mensual recibido desde la hoja CONTROL_DIARIO_280 si viene disponible
+
+                    if (listaMovimientosHoja1.length === 0 && Array.isArray(data.movimientosHoy) && data.movimientosHoy.length > 0) {
+                        listaMovimientosHoja1 = data.movimientosHoy;
+                    }
                     if (Array.isArray(data.historialMensual) && data.historialMensual.length > 0) {
                         listaDashboardMensual = data.historialMensual;
-                        sincronizarDiaActualEnDashboardMes();
-                        renderizarHoja2DashboardMes();
-                        guardarEstadoGeneralEnStorage();
                     }
+                    actualizarVistasYControl280();
+
                     const horaTxt = data.horaServidor || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
                     actualizarIndicadorCloudUI('ok', 'SHEETS ✓', `✓ Guardado en Google Sheets (${horaTxt})`);
                 } else {
-                    actualizarIndicadorCloudUI('offline', 'COLA', '⚠️ Guardado local (Reintentar Sync)');
+                    actualizarIndicadorCloudUI('offline', 'COLA', '⚠️ Error en Sheets: ' + (data?.error || 'Reintentar Sync'));
                 }
             } catch (err) {
-                actualizarIndicadorCloudUI('offline', 'LOCAL', '⚠️ Guardado en memoria local (Sin red)');
+                actualizarIndicadorCloudUI('offline', 'LOCAL', '⚠️ Guardado local (Verifica la publicación de Apps Script)');
             } finally {
                 sincronizandoAhora = false;
                 if (syncPendienteEnCola) {
@@ -1662,28 +1671,30 @@
         }
 
         async function descargarEstadoInicialDesdeSheets() {
-            // Si hay cambios locales pendientes de enviar, primero los subimos para jamás pisar trabajo local
-            if (localStorage.getItem(KEY_PENDIENTE_SYNC) === 'true') {
-                ejecutarSincronizacionCloud();
-                return;
-            }
-
             actualizarIndicadorCloudUI('syncing', 'CARGANDO', '🔄 Consultando plantilla Google Sheets...');
             const fechaHoy = obtenerFechaHoyStr();
 
             try {
                 const urlGet = `${APPS_SCRIPT_URL}?fecha=${encodeURIComponent(fechaHoy)}&t=${Date.now()}`;
-                const resp = await fetch(urlGet, { method: 'GET' });
-                const data = await resp.json();
+                const resp = await fetch(urlGet, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                const textoResp = await resp.text();
+                const data = JSON.parse(textoResp);
 
                 if (data && data.ok) {
                     // 1. Fusionar Base de Datos de Personas sin perder las locales
                     if (Array.isArray(data.personas) && data.personas.length > 0) {
                         const mapaLocal = new Map();
-                        baseDatosPersonas.forEach(p => mapaLocal.set(p.id, p));
                         data.personas.forEach(pRemoto => {
                             if (pRemoto && pRemoto.nombre) {
                                 mapaLocal.set(pRemoto.id, pRemoto);
+                            }
+                        });
+                        baseDatosPersonas.forEach(pLocal => {
+                            if (!mapaLocal.has(pLocal.id)) {
+                                mapaLocal.set(pLocal.id, pLocal);
                             }
                         });
                         baseDatosPersonas = Array.from(mapaLocal.values());
@@ -1718,9 +1729,16 @@
                     actualizarEstiloVisualModo();
                     actualizarVistasYControl280();
                     actualizarIndicadorCloudUI('ok', 'SHEETS ✓', '✓ Sincronizado con Google Sheets');
+
+                    // Si quedaron datos locales pendientes de enviar, subirlos ahora
+                    if (localStorage.getItem(KEY_PENDIENTE_SYNC) === 'true' && (listaMovimientosHoja1.length > 0 || opTurnoManana > 0 || opTurnoTarde > 0)) {
+                        ejecutarSincronizacionCloud();
+                    }
+                } else {
+                    actualizarIndicadorCloudUI('offline', 'ERROR', '⚠️ Respuesta inválida de Google Sheets');
                 }
             } catch (e) {
-                actualizarIndicadorCloudUI('ok', 'LOCAL', '⚡ Modo Local Activo');
+                actualizarIndicadorCloudUI('offline', 'OFFLINE', '⚠️ Sin conexión con Google Sheets');
             }
         }
 
@@ -1811,7 +1829,6 @@
                             }
                         });
                     }
-                    // Si la fecha guardada es de un día anterior, reinicia los contadores diarios para el nuevo día
                     if (est.fechaActiva && est.fechaActiva !== fechaHoy) {
                         listaMovimientosHoja1 = [];
                         opTurnoManana = 0;
@@ -2253,7 +2270,7 @@
 
             if (totalNuevasOps > 0) {
                 vibrarRapido([16, 24, 16]);
-                programarSincronizacionCloud();
+                programarSincronizacionCloud(true);
                 const badge = document.getElementById('badgeOperacion');
                 badge.innerText = totalNuevasOps > 1
                     ? `✓ ${totalNuevasOps} OPERACIONES ENVIADAS A SHEETS (${per ? per.nombre.toUpperCase() : ''})`
@@ -3165,7 +3182,7 @@
             if (hojaActivaActual === 1) {
                 listaMovimientosHoja1 = [];
                 actualizarVistasYControl280();
-                programarSincronizacionCloud(true);
+                programarSincronizacionCloud(true, true);
             } else if (hojaActivaActual === 2) {
                 modoVistaGauge = (modoVistaGauge === 'hoy') ? 'mes' : 'hoy';
                 renderizarHoja2DashboardMes();
@@ -3196,7 +3213,7 @@
                 const elim = listaMovimientosHoja1.pop();
                 recalcularCorrelativosMovimientos();
                 actualizarVistasYControl280();
-                programarSincronizacionCloud(true);
+                programarSincronizacionCloud(true, true);
                 btn.classList.add('confirmado');
                 lbl.innerText = 'ANULADO';
                 badge.innerText = `↩️ ANULADA OP #${elim.numOp} (${elim.personaNombre}) EN SHEETS`;
