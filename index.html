@@ -96,7 +96,7 @@
         }
 
         /* =========================================
-           BARRA LIMPIA DE INVOCACIÓN DE PERSONA (BASE DE DATOS)
+           BARRA LIMPIA DE INVOCACIÓN DE PERSONA + ESTADO CLOUD
            ========================================= */
         .cliente-invocador-bar {
             display: flex;
@@ -107,7 +107,7 @@
             border-radius: 9px;
             padding: 3px 6px;
             margin-bottom: 4px;
-            gap: 6px;
+            gap: 5px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             height: 40px;
         }
@@ -160,6 +160,43 @@
             flex-shrink: 0;
         }
         .btn-add-cliente-mini:active { transform: scale(0.92); }
+
+        /* PÍLDORA INDICADORA DE SINCRONIZACIÓN CON GOOGLE SHEETS */
+        .cloud-sync-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 30px;
+            padding: 0 7px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 900;
+            border: 1.5px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .cloud-sync-pill:active { transform: scale(0.93); }
+        .cloud-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+        .cloud-sync-pill.syncing { border-color: #93c5fd; background: #eff6ff; color: #002A8D; }
+        .cloud-sync-pill.syncing .cloud-dot { background: #FF6A00; animation: pulseDot 0.8s infinite alternate; }
+        .cloud-sync-pill.ok { border-color: #86efac; background: #f0fdf4; color: #15803d; }
+        .cloud-sync-pill.ok .cloud-dot { background: #16a34a; }
+        .cloud-sync-pill.offline { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
+        .cloud-sync-pill.offline .cloud-dot { background: #dc2626; }
+
+        @keyframes pulseDot {
+            from { transform: scale(0.8); opacity: 0.5; }
+            to { transform: scale(1.3); opacity: 1; }
+        }
 
         /* =========================================
            PANELES DE CABECERA Y CAJAS NUMÉRICAS
@@ -584,7 +621,7 @@
         .switcher-mini-label { font-size: 7.5px; font-weight: 900; letter-spacing: 0.4px; line-height: 1; margin-top: 1px; text-transform: uppercase; }
 
         /* =========================================================
-           PANTALLA 2: CONTROL DE META 280 (ESTILO CIERRE DE CAJA LIMPIO)
+           PANTALLA 2: CONTROL DE META 280
            ========================================================= */
         .top-bar-cierre {
             display: flex;
@@ -698,14 +735,14 @@
 
         .capital-row {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             gap: 8px;
             margin-bottom: 5px;
             padding: 0 4px;
             user-select: none;
         }
-        .capital-label { font-weight: 800; color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+        .capital-label { font-weight: 800; color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; }
         .capital-display-pill {
             font-size: 14px;
             font-weight: 900;
@@ -739,7 +776,7 @@
         .btn-borrar-todo-cierre:active { transform: scale(0.97); }
 
         /* =========================================================
-           PANTALLA 3: HOJAS (MOVIMIENTOS + DASHBOARD MES + BASE DE DATOS)
+           PANTALLA 3: HOJAS + DASHBOARD CON CÍRCULO ANIMADO
            ========================================================= */
         .hojas-wrapper {
             background-color: var(--bg-light);
@@ -772,7 +809,7 @@
             color: #ffffff;
             border-radius: 7px;
             height: 32px;
-            padding: 0 10px;
+            padding: 0 9px;
             font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
@@ -783,6 +820,7 @@
             gap: 4px;
         }
         .btn-top-hojas:active { transform: scale(0.95); }
+        .btn-top-hojas.btn-cloud-top { background: #FF6A00; border-color: #fdba74; }
         .btn-top-hojas.btn-excel-top { background: #16a34a; border-color: #22c55e; }
         .btn-top-hojas.btn-borrar-top { background: rgba(220, 38, 38, 0.25); border-color: rgba(252, 165, 165, 0.45); }
 
@@ -799,7 +837,7 @@
             background: none;
             border: none;
             border-bottom: 3.5px solid transparent;
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 900;
             color: #64748b;
             text-transform: uppercase;
@@ -807,7 +845,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 4px;
         }
         .btn-tab-hoja.active {
             color: var(--bcp-blue);
@@ -816,7 +854,7 @@
         }
 
         .badge-contador-op {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 900;
             background: var(--bcp-blue);
             color: #ffffff;
@@ -846,6 +884,116 @@
             flex-direction: column;
             padding: 6px;
             overflow: hidden;
+        }
+
+        /* TARJETA EJECUTIVA DEL CÍRCULO ANIMADO DE PORCENTAJES */
+        .gauge-dashboard-card {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+            cursor: pointer;
+            user-select: none;
+        }
+        .gauge-svg-box {
+            position: relative;
+            width: 112px;
+            height: 112px;
+            flex-shrink: 0;
+        }
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+        .gauge-track {
+            fill: none;
+            stroke: #e2e8f0;
+            stroke-width: 11;
+        }
+        .gauge-seg {
+            fill: none;
+            stroke-width: 11;
+            stroke-linecap: butt;
+            transition: stroke-dasharray 0.65s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .gauge-center-info {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .gauge-pct-val {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--bcp-blue);
+            line-height: 1;
+            letter-spacing: -0.6px;
+        }
+        .gauge-sub-Ratio {
+            font-size: 9.5px;
+            font-weight: 900;
+            color: #475569;
+            margin-top: 2px;
+        }
+        .gauge-mode-pill {
+            margin-top: 3px;
+            font-size: 8px;
+            font-weight: 900;
+            background: #e0e7ff;
+            color: var(--bcp-blue);
+            padding: 1px 6px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .gauge-legend-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .gauge-legend-title {
+            font-size: 10.5px;
+            font-weight: 900;
+            color: var(--bcp-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .legend-row-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #1e293b;
+            padding: 2px 0;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+        .legend-dot-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .l-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 3px;
+            flex-shrink: 0;
         }
 
         .hoja1-saldos-grid {
@@ -990,7 +1138,7 @@
             <button type="submit" style="display:none;" aria-hidden="true"></button>
             <div class="caja-wrapper">
 
-                <!-- BARRA COMPACTA DE PERSONA (INVOCACIÓN DIRECTA POR NOMBRE + DNI 8+1 VERIFICADOR) -->
+                <!-- BARRA COMPACTA DE PERSONA + INDICADOR CLOUD SHEETS -->
                 <div class="cliente-invocador-bar">
                     <select id="selectClienteActivo" class="select-cliente-clean" onchange="cambiarClienteSeleccionado(this.value)"></select>
                     <div class="dni-badge-clean" onclick="copiarDniClienteActivo()" title="Toca para copiar DNI">
@@ -998,6 +1146,10 @@
                         <span id="lblDniClienteActivo">--------</span>
                     </div>
                     <button type="button" class="btn-add-cliente-mini" onpointerdown="event.preventDefault()" onclick="abrirModalPersona()" title="Registrar nueva persona">+</button>
+                    <div id="pillSyncCaja" class="cloud-sync-pill ok" onpointerdown="event.preventDefault()" onclick="forzarSincronizacionManual()" title="Estado de conexión con Google Sheets (Toca para sincronizar)">
+                        <span class="cloud-dot"></span>
+                        <span id="txtSyncCaja">SHEETS</span>
+                    </div>
                 </div>
 
                 <!-- CABECERA DEL BLOQUE DE MONTOS MANUALES -->
@@ -1093,7 +1245,7 @@
     </button>
 
     <!-- =========================================================
-         PANTALLA 2: CONTROL DE META 280 Y BASE DE DATOS (SEPARADA EN EL CONMUTADOR 2D)
+         PANTALLA 2: CONTROL DE META 280 Y BASE DE DATOS
          ========================================================= -->
     <div id="app-cierre" class="main-app-container">
         <form id="formCierre" onsubmit="ejecutarGuardadoTurnosConEnter(event)" action="javascript:void(0);">
@@ -1103,6 +1255,9 @@
                 <div class="top-bar-cierre">
                     <div class="top-bar-title">📋 CONTROL META 280</div>
                     <div class="top-bar-actions">
+                        <button type="button" class="btn-ir-efectivo" onpointerdown="event.preventDefault()" onclick="forzarSincronizacionManual()" style="background:#FF6A00; border-color:#fdba74;">
+                            <span>☁️ GUARDAR SHEETS</span>
+                        </button>
                         <button type="button" class="btn-ir-efectivo" onpointerdown="event.preventDefault()" onclick="abrirModalPersona()">
                             <span>👤 + PERSONA</span>
                         </button>
@@ -1138,12 +1293,15 @@
                     </div>
                 </div>
 
-                <!-- META DIARIA CONFIGURABLE -->
+                <!-- META DIARIA Y ESTADO DE CONEXIÓN -->
                 <div class="capital-row">
-                    <span class="capital-label">Meta Diaria</span>
-                    <span class="capital-display-pill" onclick="cambiarMetaDiariaPrompt()">
-                        <span id="lblMetaActiva">280</span> OP
-                    </span>
+                    <span class="capital-label" id="lblEstadoSyncCierre">☁️ Conectado a Google Sheets</span>
+                    <div>
+                        <span class="capital-label">Meta: </span>
+                        <span class="capital-display-pill" onclick="cambiarMetaDiariaPrompt()">
+                            <span id="lblMetaActiva">280</span> OP
+                        </span>
+                    </div>
                 </div>
 
                 <!-- PANEL DE RESPUESTA SOBRIO -->
@@ -1167,16 +1325,17 @@
     </div>
 
     <!-- =========================================================
-         PANTALLA 3: HOJAS BCP (MOVIMIENTOS + DASHBOARD 280 + BASE DE DATOS)
+         PANTALLA 3: HOJAS BCP (MOVIMIENTOS + DASHBOARD ANIMADO + PERSONAS)
          ========================================================= -->
     <div id="app-hojas" class="main-app-container">
         <div class="hojas-wrapper">
 
             <div class="top-bar-hojas">
                 <button type="button" class="btn-top-hojas" onclick="cerrarPantallaHojas()">← VOLVER</button>
-                <div style="font-size:13.5px; font-weight:900; letter-spacing:0.5px;">HOJAS BCP</div>
-                <div style="display:flex; gap:5px;">
-                    <button type="button" class="btn-top-hojas btn-borrar-top" id="btnBorrarContextualHojas" onclick="accionBorrarHojaActiva()">🗑️ BORRAR</button>
+                <div style="font-size:13px; font-weight:900; letter-spacing:0.4px;" id="lblTituloTopHojas">HOJAS BCP</div>
+                <div style="display:flex; gap:4px;">
+                    <button type="button" class="btn-top-hojas btn-cloud-top" id="btnCloudSyncHojas" onclick="forzarSincronizacionManual()" title="Sincronizar con Google Sheets">☁️ SYNC</button>
+                    <button type="button" class="btn-top-hojas btn-borrar-top" id="btnBorrarContextualHojas" onclick="accionBorrarHojaActiva()">🗑️</button>
                     <button type="button" class="btn-top-hojas btn-excel-top" onclick="exportarHojasBcpXlsx()">📥 EXCEL</button>
                 </div>
             </div>
@@ -1221,16 +1380,48 @@
                     </div>
                 </div>
 
-                <!-- HOJA 2: DASHBOARD MENSUAL ACUMULADO (META 280) -->
+                <!-- HOJA 2: DASHBOARD EJECUTIVO CON CÍRCULO ANIMADO Y TABLA MENSUAL -->
                 <div class="hoja-page-view">
-                    <div class="hoja1-saldos-grid">
-                        <div class="card-saldo-hoja1">
-                            <div class="lbl-saldo-hoja1">PROMEDIO DIARIO MES</div>
-                            <div class="val-saldo-hoja1" id="hoja2-promedio-mes">0 OP</div>
+                    <!-- TARJETA DEL ANILLO CIRCULAR ANIMADO (TOCA PARA ALTERNAR HOY / MES) -->
+                    <div class="gauge-dashboard-card" onclick="alternarModoGaugeDashboard()" title="Toca para alternar entre Avance de Hoy y Avance del Mes">
+                        <div class="gauge-svg-box">
+                            <svg class="gauge-svg" viewBox="0 0 120 120">
+                                <circle class="gauge-track" cx="60" cy="60" r="48"></circle>
+                                <!-- Segmento 1: Turno Mañana (Azul BCP) -->
+                                <circle id="gaugeSegManana" class="gauge-seg" cx="60" cy="60" r="48" stroke="#002A8D" stroke-dasharray="0 301.6" stroke-dashoffset="0"></circle>
+                                <!-- Segmento 2: Turno Tarde (Naranja BCP) -->
+                                <circle id="gaugeSegTarde" class="gauge-seg" cx="60" cy="60" r="48" stroke="#FF6A00" stroke-dasharray="0 301.6" stroke-dashoffset="0"></circle>
+                                <!-- Segmento 3: Cartera Clientes (Turquesa) -->
+                                <circle id="gaugeSegClientes" class="gauge-seg" cx="60" cy="60" r="48" stroke="#0D9488" stroke-dasharray="0 301.6" stroke-dashoffset="0"></circle>
+                            </svg>
+                            <div class="gauge-center-info">
+                                <span class="gauge-pct-val" id="lblGaugePorcentaje">0%</span>
+                                <span class="gauge-sub-Ratio" id="lblGaugeConteo">0 / 280</span>
+                                <span class="gauge-mode-pill" id="lblGaugeModo">HOY ⇄</span>
+                            </div>
                         </div>
-                        <div class="card-saldo-hoja1 card-efectivo-actual">
-                            <div class="lbl-saldo-hoja1">DÍAS CUMPLIDOS (≥ 280)</div>
-                            <div class="val-saldo-hoja1" id="hoja2-dias-cumplidos">0 / 0</div>
+
+                        <div class="gauge-legend-col">
+                            <div class="gauge-legend-title">
+                                <span id="lblTituloGaugeCard">AVANCE DEL DÍA</span>
+                                <span id="lblEstadoGaugeBadge" style="font-size:9.5px; padding:1.5px 6px; border-radius:5px; background:#f1f5f9; color:#475569;">EN CURSO</span>
+                            </div>
+                            <div class="legend-row-item">
+                                <span class="legend-dot-label"><span class="l-dot" style="background:#002A8D;"></span>Turno Mañana</span>
+                                <span id="lblLegManana">0 op (0%)</span>
+                            </div>
+                            <div class="legend-row-item">
+                                <span class="legend-dot-label"><span class="l-dot" style="background:#FF6A00;"></span>Turno Tarde</span>
+                                <span id="lblLegTarde">0 op (0%)</span>
+                            </div>
+                            <div class="legend-row-item">
+                                <span class="legend-dot-label"><span class="l-dot" style="background:#0D9488;"></span>Op. Clientes</span>
+                                <span id="lblLegClientes">0 op (0%)</span>
+                            </div>
+                            <div class="legend-row-item" style="border-bottom:none; padding-top:3px; color:var(--bcp-blue); font-weight:900;">
+                                <span id="lblResumenMesMini">Prom. Mes: 0 op</span>
+                                <span id="lblDiasCumplidosMini">Cumplidos: 0/0</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1316,15 +1507,18 @@
 
     <script>
         /* ===============================================================
-           MOTOR 100% LOCAL DE CERO LATENCIA (OPERACIONES + BASE DE DATOS + DASHBOARD 280)
+           CONEXIÓN DIRECTA CON GOOGLE SHEETS (APPS SCRIPT WEB APP)
            =============================================================== */
-        const KEY_PERSONAS_DB    = 'bcp_db_personas_v3';
-        const KEY_MOVIMIENTOS_H1 = 'bcp_db_movimientos_h1_v3';
-        const KEY_DASHBOARD_H2   = 'bcp_db_dashboard_h2_v3';
-        const KEY_ESTADO_CAJA    = 'bcp_db_estado_caja_v3';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyts068Om5X__JwBTxTkgQyjMUNirbBR0RQTjLiVcRAaOZeAi6RTMvNBogGLKOcME8/exec';
 
-        let contextoPrincipal = localStorage.getItem('bcp_contexto_activo_v3') || 'caja';
-        let modoOperacion = localStorage.getItem('bcp_modo_operacion_v3') || 'deposito';
+        const KEY_PERSONAS_DB    = 'bcp_db_personas_v4';
+        const KEY_MOVIMIENTOS_H1 = 'bcp_db_movimientos_h1_v4';
+        const KEY_DASHBOARD_H2   = 'bcp_db_dashboard_h2_v4';
+        const KEY_ESTADO_CAJA    = 'bcp_db_estado_caja_v4';
+        const KEY_PENDIENTE_SYNC = 'bcp_db_pendiente_sync_v4';
+
+        let contextoPrincipal = localStorage.getItem('bcp_contexto_activo_v4') || 'caja';
+        let modoOperacion = localStorage.getItem('bcp_modo_operacion_v4') || 'deposito';
 
         let baseDatosPersonas = [
             { id: 'per_1', nombre: 'General / Directo', dni: '00000000-0', cuenta: '' }
@@ -1334,10 +1528,11 @@
         let listaMovimientosHoja1 = [];
         let listaDashboardMensual = [];
 
-        let metaDiariaObjetivo = parseInt(localStorage.getItem('bcp_meta_diaria_v3')) || 280;
+        let metaDiariaObjetivo = parseInt(localStorage.getItem('bcp_meta_diaria_v4')) || 280;
         let opTurnoManana = 0;
         let opTurnoTarde  = 0;
 
+        let modoVistaGauge = 'hoy'; // 'hoy' o 'mes'
         let hojaActivaActual = 1;
         let esTransicionClickHoja = false;
         let timerTransicionHoja = null;
@@ -1345,6 +1540,11 @@
         let ultimoInputCajaActivo = 'b1';
         let ultimoInputCierreActivo = 'input-turno-manana';
         let altoPantallaSinTeclado = Math.max(window.innerHeight || 640, 520);
+
+        // Control de Cola Atómica hacia Google Sheets
+        let sincronizandoAhora = false;
+        let syncPendienteEnCola = false;
+        let timerDebounceSync = null;
 
         const formatoSoles = (num) => Math.abs(Number(num) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1365,6 +1565,175 @@
             retiro:   crearMapa10Cuadros(),
             yape:     crearMapa10Cuadros()
         };
+
+        /* ===============================================================
+           MOTOR DE SINCRONIZACIÓN ATÓMICA CON GOOGLE SHEETS (CERO DUPLICADOS)
+           =============================================================== */
+        function actualizarIndicadorCloudUI(estado, textoCorto, detalleLargo) {
+            const pill = document.getElementById('pillSyncCaja');
+            const txtCaja = document.getElementById('txtSyncCaja');
+            const lblCierre = document.getElementById('lblEstadoSyncCierre');
+            const btnHojas = document.getElementById('btnCloudSyncHojas');
+
+            if (pill) {
+                pill.className = 'cloud-sync-pill ' + estado;
+            }
+            if (txtCaja && textoCorto) {
+                txtCaja.innerText = textoCorto;
+            }
+            if (lblCierre && detalleLargo) {
+                lblCierre.innerText = detalleLargo;
+            }
+            if (btnHojas) {
+                btnHojas.innerText = estado === 'syncing' ? '⏳ SYNC...' : (estado === 'ok' ? '✓ SHEETS' : '☁️ SYNC');
+            }
+        }
+
+        function programarSincronizacionCloud(inmediato = false) {
+            localStorage.setItem(KEY_PENDIENTE_SYNC, 'true');
+            clearTimeout(timerDebounceSync);
+            if (inmediato) {
+                ejecutarSincronizacionCloud();
+            } else {
+                timerDebounceSync = setTimeout(ejecutarSincronizacionCloud, 180);
+            }
+        }
+
+        async function ejecutarSincronizacionCloud() {
+            if (sincronizandoAhora) {
+                syncPendienteEnCola = true;
+                return;
+            }
+
+            sincronizandoAhora = true;
+            syncPendienteEnCola = false;
+            actualizarIndicadorCloudUI('syncing', 'SYNC...', '🔄 Sincronizando en las 4 hojas...');
+
+            const fechaHoy = obtenerFechaHoyStr();
+            const cantReg = listaMovimientosHoja1.length;
+            const totalDia = opTurnoManana + opTurnoTarde + cantReg;
+
+            const payload = {
+                accion: 'sincronizar_todo',
+                fechaHoy: fechaHoy,
+                personas: baseDatosPersonas,
+                movimientosHoy: listaMovimientosHoja1,
+                resumenDia: {
+                    fecha: fechaHoy,
+                    manana: opTurnoManana,
+                    tarde: opTurnoTarde,
+                    registradas: cantReg,
+                    total: totalDia,
+                    meta: metaDiariaObjetivo
+                }
+            };
+
+            try {
+                const resp = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+                if (data && data.ok) {
+                    localStorage.setItem(KEY_PENDIENTE_SYNC, 'false');
+                    // Actualizar historial mensual recibido desde la hoja CONTROL_DIARIO_280 si viene disponible
+                    if (Array.isArray(data.historialMensual) && data.historialMensual.length > 0) {
+                        listaDashboardMensual = data.historialMensual;
+                        sincronizarDiaActualEnDashboardMes();
+                        renderizarHoja2DashboardMes();
+                        guardarEstadoGeneralEnStorage();
+                    }
+                    const horaTxt = data.horaServidor || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    actualizarIndicadorCloudUI('ok', 'SHEETS ✓', `✓ Guardado en Google Sheets (${horaTxt})`);
+                } else {
+                    actualizarIndicadorCloudUI('offline', 'COLA', '⚠️ Guardado local (Reintentar Sync)');
+                }
+            } catch (err) {
+                actualizarIndicadorCloudUI('offline', 'LOCAL', '⚠️ Guardado en memoria local (Sin red)');
+            } finally {
+                sincronizandoAhora = false;
+                if (syncPendienteEnCola) {
+                    syncPendienteEnCola = false;
+                    setTimeout(ejecutarSincronizacionCloud, 120);
+                }
+            }
+        }
+
+        async function descargarEstadoInicialDesdeSheets() {
+            // Si hay cambios locales pendientes de enviar, primero los subimos para jamás pisar trabajo local
+            if (localStorage.getItem(KEY_PENDIENTE_SYNC) === 'true') {
+                ejecutarSincronizacionCloud();
+                return;
+            }
+
+            actualizarIndicadorCloudUI('syncing', 'CARGANDO', '🔄 Consultando plantilla Google Sheets...');
+            const fechaHoy = obtenerFechaHoyStr();
+
+            try {
+                const urlGet = `${APPS_SCRIPT_URL}?fecha=${encodeURIComponent(fechaHoy)}&t=${Date.now()}`;
+                const resp = await fetch(urlGet, { method: 'GET' });
+                const data = await resp.json();
+
+                if (data && data.ok) {
+                    // 1. Fusionar Base de Datos de Personas sin perder las locales
+                    if (Array.isArray(data.personas) && data.personas.length > 0) {
+                        const mapaLocal = new Map();
+                        baseDatosPersonas.forEach(p => mapaLocal.set(p.id, p));
+                        data.personas.forEach(pRemoto => {
+                            if (pRemoto && pRemoto.nombre) {
+                                mapaLocal.set(pRemoto.id, pRemoto);
+                            }
+                        });
+                        baseDatosPersonas = Array.from(mapaLocal.values());
+                        if (!baseDatosPersonas.some(p => p.id === personaActivaId)) {
+                            personaActivaId = baseDatosPersonas[0].id;
+                        }
+                    }
+
+                    // 2. Si hoy aún no teníamos movimientos locales pero en la hoja sí existen, restaurarlos
+                    if (listaMovimientosHoja1.length === 0 && Array.isArray(data.movimientosHoy) && data.movimientosHoy.length > 0) {
+                        listaMovimientosHoja1 = data.movimientosHoy;
+                    }
+
+                    // 3. Si los turnos locales están en 0 y la hoja ya tiene turnos de hoy, traerlos
+                    if (data.turnoHoy) {
+                        if (opTurnoManana === 0 && data.turnoHoy.manana > 0) {
+                            opTurnoManana = data.turnoHoy.manana;
+                            document.getElementById('input-turno-manana').value = opTurnoManana;
+                        }
+                        if (opTurnoTarde === 0 && data.turnoHoy.tarde > 0) {
+                            opTurnoTarde = data.turnoHoy.tarde;
+                            document.getElementById('input-turno-tarde').value = opTurnoTarde;
+                        }
+                    }
+
+                    // 4. Actualizar tabla mensual desde CONTROL_DIARIO_280
+                    if (Array.isArray(data.historialMensual) && data.historialMensual.length > 0) {
+                        listaDashboardMensual = data.historialMensual;
+                    }
+
+                    renderizarSelectorPersonas();
+                    actualizarEstiloVisualModo();
+                    actualizarVistasYControl280();
+                    actualizarIndicadorCloudUI('ok', 'SHEETS ✓', '✓ Sincronizado con Google Sheets');
+                }
+            } catch (e) {
+                actualizarIndicadorCloudUI('ok', 'LOCAL', '⚡ Modo Local Activo');
+            }
+        }
+
+        function forzarSincronizacionManual() {
+            vibrarRapido(16);
+            programarSincronizacionCloud(true);
+        }
+
+        window.addEventListener('online', () => {
+            if (localStorage.getItem(KEY_PENDIENTE_SYNC) === 'true') {
+                ejecutarSincronizacionCloud();
+            }
+        });
 
         /* ===============================================================
            FORMATEO INTELIGENTE DE DNI PERUANO (8 DÍGITOS + 1 DÍGITO VERIFICADOR = 9)
@@ -1399,11 +1768,13 @@
         }
 
         /* ===============================================================
-           ALMACENAMIENTO LOCAL BLINDADO
+           ALMACENAMIENTO LOCAL BLINDADO Y CAMBIO AUTOMÁTICO DE DÍA
            =============================================================== */
         function cargarDatosLocales() {
+            const fechaHoy = obtenerFechaHoyStr();
+
             try {
-                const rawPer = localStorage.getItem(KEY_PERSONAS_DB) || localStorage.getItem('bcp_db_personas_v2');
+                const rawPer = localStorage.getItem(KEY_PERSONAS_DB) || localStorage.getItem('bcp_db_personas_v3');
                 if (rawPer) {
                     const parsed = JSON.parse(rawPer);
                     if (Array.isArray(parsed) && parsed.length > 0) baseDatosPersonas = parsed;
@@ -1411,7 +1782,7 @@
             } catch (e) {}
 
             try {
-                const rawMovs = localStorage.getItem(KEY_MOVIMIENTOS_H1) || localStorage.getItem('bcp_db_movimientos_h1_v2');
+                const rawMovs = localStorage.getItem(KEY_MOVIMIENTOS_H1) || localStorage.getItem('bcp_db_movimientos_h1_v3');
                 if (rawMovs) {
                     const parsed = JSON.parse(rawMovs);
                     if (Array.isArray(parsed)) listaMovimientosHoja1 = parsed;
@@ -1419,7 +1790,7 @@
             } catch (e) {}
 
             try {
-                const rawDash = localStorage.getItem(KEY_DASHBOARD_H2) || localStorage.getItem('bcp_db_dashboard_h2_v2');
+                const rawDash = localStorage.getItem(KEY_DASHBOARD_H2) || localStorage.getItem('bcp_db_dashboard_h2_v3');
                 if (rawDash) {
                     const parsed = JSON.parse(rawDash);
                     if (Array.isArray(parsed)) listaDashboardMensual = parsed;
@@ -1427,7 +1798,7 @@
             } catch (e) {}
 
             try {
-                const rawEst = localStorage.getItem(KEY_ESTADO_CAJA) || localStorage.getItem('bcp_db_estado_caja_v2');
+                const rawEst = localStorage.getItem(KEY_ESTADO_CAJA) || localStorage.getItem('bcp_db_estado_caja_v3');
                 if (rawEst) {
                     const est = JSON.parse(rawEst);
                     if (est.personaActivaId) personaActivaId = est.personaActivaId;
@@ -1440,8 +1811,15 @@
                             }
                         });
                     }
-                    opTurnoManana = parseInt(est.opTurnoManana) || 0;
-                    opTurnoTarde  = parseInt(est.opTurnoTarde) || 0;
+                    // Si la fecha guardada es de un día anterior, reinicia los contadores diarios para el nuevo día
+                    if (est.fechaActiva && est.fechaActiva !== fechaHoy) {
+                        listaMovimientosHoja1 = [];
+                        opTurnoManana = 0;
+                        opTurnoTarde = 0;
+                    } else {
+                        opTurnoManana = parseInt(est.opTurnoManana) || 0;
+                        opTurnoTarde  = parseInt(est.opTurnoTarde) || 0;
+                    }
                 }
             } catch (e) {}
 
@@ -1456,6 +1834,7 @@
                 localStorage.setItem(KEY_MOVIMIENTOS_H1, JSON.stringify(listaMovimientosHoja1));
                 localStorage.setItem(KEY_DASHBOARD_H2, JSON.stringify(listaDashboardMensual));
                 localStorage.setItem(KEY_ESTADO_CAJA, JSON.stringify({
+                    fechaActiva: obtenerFechaHoyStr(),
                     personaActivaId,
                     datosPorModo,
                     opTurnoManana,
@@ -1562,7 +1941,7 @@
         }
 
         /* ===============================================================
-           LÓGICA DE LA CAJA PRINCIPAL (INGRESO MANUAL, COMA = 00 Y ENTER A HISTORIAL)
+           LÓGICA DE LA CAJA PRINCIPAL (INGRESO MANUAL, COMA = 00 Y ENTER A SHEETS)
            =============================================================== */
         function parseValorCentimosDeTexto(str) {
             if (!str) return 0;
@@ -1750,7 +2129,7 @@
             }
             guardarValoresModoActual();
             modoOperacion = nuevoModo;
-            localStorage.setItem('bcp_modo_operacion_v3', modoOperacion);
+            localStorage.setItem('bcp_modo_operacion_v4', modoOperacion);
             ultimoInputCajaActivo = null;
 
             actualizarEstiloVisualModo();
@@ -1816,7 +2195,7 @@
             }
         }
 
-        // ENTER EN TECLADO: REGISTRA AUTOMÁTICAMENTE EN MOVIMIENTOS, DASHBOARD Y LIMPIA PARA LA SIGUIENTE OPERACIÓN
+        // ENTER EN TECLADO: REGISTRA EN MEMORIA EN 0ms Y SINCRONIZA EN SEGUNDO PLANO CON GOOGLE SHEETS
         function ejecutarAccionTecladoCaja(e) {
             if (e) {
                 e.preventDefault();
@@ -1852,7 +2231,7 @@
                 montos.forEach(montoVal => {
                     const sigNum = listaMovimientosHoja1.length + 1;
                     listaMovimientosHoja1.push({
-                        idUnico: `OP-${Date.now()}-${sigNum}`,
+                        idUnico: `OP-${Date.now()}-${sigNum}-${Math.floor(Math.random() * 900 + 100)}`,
                         numOp: sigNum,
                         fecha: fechaStr,
                         hora: horaStr,
@@ -1874,11 +2253,12 @@
 
             if (totalNuevasOps > 0) {
                 vibrarRapido([16, 24, 16]);
+                programarSincronizacionCloud();
                 const badge = document.getElementById('badgeOperacion');
                 badge.innerText = totalNuevasOps > 1
-                    ? `✓ ${totalNuevasOps} OPERACIONES GUARDADAS (${per ? per.nombre.toUpperCase() : ''})`
+                    ? `✓ ${totalNuevasOps} OPERACIONES ENVIADAS A SHEETS (${per ? per.nombre.toUpperCase() : ''})`
                     : `✓ OP #${listaMovimientosHoja1.length} GUARDADA · ${per ? per.nombre.toUpperCase() : ''} (S/ ${formatoSoles(ultimoMontoGuardado)})`;
-                setTimeout(() => actualizarEstiloVisualModo(), 850);
+                setTimeout(() => actualizarEstiloVisualModo(), 900);
             }
 
             return false;
@@ -1963,7 +2343,7 @@
         }, true);
 
         /* ===============================================================
-           PANTALLA 2: CONTROL SOBRIO DE META 280 (MAÑANA + TARDE + REGISTRADAS)
+           PANTALLA 2: CONTROL DE META 280 + SINCRONIZACIÓN A HOJA 2
            =============================================================== */
         function handleInputTurnos(input) {
             if (input) registrarFocoCierre(input);
@@ -1978,6 +2358,7 @@
             sincronizarDiaActualEnDashboardMes();
             renderizarHoja2DashboardMes();
             guardarEstadoGeneralEnStorage();
+            programarSincronizacionCloud();
         }
 
         function calcularCuadreMeta280() {
@@ -2035,11 +2416,12 @@
             sincronizarDiaActualEnDashboardMes();
             renderizarHoja2DashboardMes();
             guardarEstadoGeneralEnStorage();
+            programarSincronizacionCloud(true);
 
             const panel = document.getElementById('panelFinalCierre');
             panel.className = 'panel-resultado estado-exacto';
             const tot = opTurnoManana + opTurnoTarde + listaMovimientosHoja1.length;
-            setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'exacto', '✓ DÍA GUARDADO EN HOJA 2', tot);
+            setResultadoPanel('textoFinalCierre', 'montoFinalCierre', 'exacto', '✓ GUARDADO EN GOOGLE SHEETS', tot);
             setTimeout(() => calcularCuadreMeta280(), 950);
             return false;
         }
@@ -2054,6 +2436,7 @@
             sincronizarDiaActualEnDashboardMes();
             renderizarHoja2DashboardMes();
             guardarEstadoGeneralEnStorage();
+            programarSincronizacionCloud(true);
         }
 
         function cambiarMetaDiariaPrompt() {
@@ -2062,16 +2445,17 @@
                 const num = parseInt(nueva.replace(/[^0-9]/g, ''));
                 if (!isNaN(num) && num > 0) {
                     metaDiariaObjetivo = num;
-                    localStorage.setItem('bcp_meta_diaria_v3', metaDiariaObjetivo);
+                    localStorage.setItem('bcp_meta_diaria_v4', metaDiariaObjetivo);
                     calcularCuadreMeta280();
                     sincronizarDiaActualEnDashboardMes();
                     renderizarHoja2DashboardMes();
+                    programarSincronizacionCloud(true);
                 }
             }
         }
 
         /* ===============================================================
-           RENDERIZADO DE LAS 3 HOJAS (MOVIMIENTOS, DASHBOARD 280, PERSONAS)
+           RENDERIZADO DE LAS 3 HOJAS + ANILLO CIRCULAR ANIMADO DE PORCENTAJES
            =============================================================== */
         function actualizarVistasYControl280() {
             sincronizarDiaActualEnDashboardMes();
@@ -2080,6 +2464,65 @@
             renderizarHoja2DashboardMes();
             renderizarHoja3BaseDatos();
             guardarEstadoGeneralEnStorage();
+        }
+
+        function alternarModoGaugeDashboard() {
+            vibrarRapido(12);
+            modoVistaGauge = (modoVistaGauge === 'hoy') ? 'mes' : 'hoy';
+            renderizarHoja2DashboardMes();
+        }
+
+        function actualizarAnilloCircularAnimado(mananaVal, tardeVal, clientesVal, metaRef, esVistaMes, promMes, cumplidosStr) {
+            const circunferencia = 2 * Math.PI * 48; // 301.59px
+            const totalActual = mananaVal + tardeVal + clientesVal;
+            const baseCalculo = Math.max(metaRef, totalActual, 1);
+
+            const pctTotal = metaRef > 0 ? ((totalActual / metaRef) * 100) : 0;
+            const pctMan = totalActual > 0 ? Math.round((mananaVal / totalActual) * 100) : 0;
+            const pctTar = totalActual > 0 ? Math.round((tardeVal / totalActual) * 100) : 0;
+            const pctCli = totalActual > 0 ? Math.max(0, 100 - pctMan - pctTar) : 0;
+
+            const largoMan = (mananaVal / baseCalculo) * circunferencia;
+            const largoTar = (tardeVal / baseCalculo) * circunferencia;
+            const largoCli = (clientesVal / baseCalculo) * circunferencia;
+
+            const segMan = document.getElementById('gaugeSegManana');
+            const segTar = document.getElementById('gaugeSegTarde');
+            const segCli = document.getElementById('gaugeSegClientes');
+
+            if (segMan && segTar && segCli) {
+                segMan.style.strokeDasharray = `${largoMan} ${circunferencia}`;
+                segMan.style.strokeDashoffset = `0`;
+
+                segTar.style.strokeDasharray = `${largoTar} ${circunferencia}`;
+                segTar.style.strokeDashoffset = `${-largoMan}`;
+
+                segCli.style.strokeDasharray = `${largoCli} ${circunferencia}`;
+                segCli.style.strokeDashoffset = `${-(largoMan + largoTar)}`;
+            }
+
+            document.getElementById('lblGaugePorcentaje').innerText = `${pctTotal.toFixed(1)}%`;
+            document.getElementById('lblGaugeConteo').innerText = `${totalActual} / ${metaRef}`;
+            document.getElementById('lblGaugeModo').innerText = esVistaMes ? 'MES ⇄' : 'HOY ⇄';
+            document.getElementById('lblTituloGaugeCard').innerText = esVistaMes ? 'ACUMULADO DEL MES' : 'AVANCE DEL DÍA HOY';
+
+            const badgeEst = document.getElementById('lblEstadoGaugeBadge');
+            const dif = totalActual - metaRef;
+            if (dif >= 0 && totalActual > 0) {
+                badgeEst.style.background = '#dcfce7';
+                badgeEst.style.color = '#15803d';
+                badgeEst.innerText = `✓ META +${dif}`;
+            } else {
+                badgeEst.style.background = '#fee2e2';
+                badgeEst.style.color = '#dc2626';
+                badgeEst.innerText = `FALTAN ${Math.abs(dif)}`;
+            }
+
+            document.getElementById('lblLegManana').innerText = `${mananaVal} op (${pctMan}%)`;
+            document.getElementById('lblLegTarde').innerText = `${tardeVal} op (${pctTar}%)`;
+            document.getElementById('lblLegClientes').innerText = `${clientesVal} op (${pctCli}%)`;
+            document.getElementById('lblResumenMesMini').innerText = `Prom. Mes: ${promMes} op`;
+            document.getElementById('lblDiasCumplidosMini').innerText = `Días ≥280: ${cumplidosStr}`;
         }
 
         function renderizarHoja1Movimientos() {
@@ -2125,21 +2568,34 @@
 
         function renderizarHoja2DashboardMes() {
             const cont = document.getElementById('contenedorFilasDashboardMes');
-            const lblProm = document.getElementById('hoja2-promedio-mes');
-            const lblCump = document.getElementById('hoja2-dias-cumplidos');
             if (!cont) return;
 
             const cantDias = listaDashboardMensual.length;
-            let sumaTotalMes = 0;
-            let cumplidos = 0;
+            let sumaManMes = 0, sumaTarMes = 0, sumaCliMes = 0, sumaTotalMes = 0, sumaMetaMes = 0, cumplidos = 0;
 
             listaDashboardMensual.forEach(d => {
-                sumaTotalMes += (d.total || 0);
-                if ((d.total || 0) >= (d.meta || 280)) cumplidos++;
+                const m = parseInt(d.manana) || 0;
+                const t = parseInt(d.tarde) || 0;
+                const r = parseInt(d.registradas) || 0;
+                const tot = parseInt(d.total) || (m + t + r);
+                const met = parseInt(d.meta) || 280;
+
+                sumaManMes += m;
+                sumaTarMes += t;
+                sumaCliMes += r;
+                sumaTotalMes += tot;
+                sumaMetaMes += met;
+                if (tot >= met) cumplidos++;
             });
 
-            if (lblProm) lblProm.innerText = `${cantDias > 0 ? Math.round(sumaTotalMes / cantDias) : 0} OP`;
-            if (lblCump) lblCump.innerText = `${cumplidos} / ${cantDias}`;
+            const promMes = cantDias > 0 ? Math.round(sumaTotalMes / cantDias) : 0;
+            const cumplidosStr = `${cumplidos}/${cantDias}`;
+
+            if (modoVistaGauge === 'mes' && cantDias > 0) {
+                actualizarAnilloCircularAnimado(sumaManMes, sumaTarMes, sumaCliMes, sumaMetaMes, true, promMes, cumplidosStr);
+            } else {
+                actualizarAnilloCircularAnimado(opTurnoManana, opTurnoTarde, listaMovimientosHoja1.length, metaDiariaObjetivo, false, promMes, cumplidosStr);
+            }
 
             if (cantDias === 0) {
                 cont.innerHTML = `<div style="padding:36px 16px; text-align:center; color:#64748b; font-size:13px; font-weight:800;">Sin registros en el mes.</div>`;
@@ -2180,7 +2636,7 @@
             baseDatosPersonas.forEach(p => {
                 if (filtro && !p.nombre.toLowerCase().includes(filtro) && !String(p.dni).includes(filtro)) return;
 
-                const cantOpsPersona = listaMovimientosHoja1.filter(m => m.personaId === p.id).length;
+                const cantOpsPersona = listaMovimientosHoja1.filter(m => m.personaId === p.id || m.personaNombre === p.nombre).length;
                 html += `
                     <div class="fila-mov-item" style="grid-template-columns: 1.2fr 96px 56px 76px;">
                         <div onclick="invocarPersonaDesdeHoja3('${p.id}')" style="cursor:pointer;">
@@ -2204,7 +2660,7 @@
         function invocarPersonaDesdeHoja3(id) {
             personaActivaId = id;
             contextoPrincipal = 'caja';
-            localStorage.setItem('bcp_contexto_activo_v3', 'caja');
+            localStorage.setItem('bcp_contexto_activo_v4', 'caja');
             renderizarSelectorPersonas();
             actualizarEstiloVisualModo();
             calcularTodoCaja();
@@ -2223,7 +2679,7 @@
         }
 
         /* ===============================================================
-           MODAL DE REGISTRO DE PERSONA (TECLADOS CONTEXTUALES)
+           MODAL DE REGISTRO DE PERSONA (TECLADOS CONTEXTUALES + SYNC SHEETS)
            =============================================================== */
         function abrirModalPersona(idEditar = null) {
             vibrarRapido(12);
@@ -2290,6 +2746,7 @@
             calcularTodoCaja();
             renderizarHoja3BaseDatos();
             guardarEstadoGeneralEnStorage();
+            programarSincronizacionCloud(true);
             cerrarModalPersona();
             return false;
         }
@@ -2304,11 +2761,12 @@
             calcularTodoCaja();
             renderizarHoja3BaseDatos();
             guardarEstadoGeneralEnStorage();
+            programarSincronizacionCloud(true);
             cerrarModalPersona();
         }
 
         /* ===============================================================
-           EXPORTACIÓN A .XLSX BINARIO REAL DE 3 HOJAS (OPENXML + CRC32)
+           EXPORTACIÓN LOCAL DE RESPALDO A .XLSX BINARIO REAL DE 3 HOJAS
            =============================================================== */
         const TABLA_CRC32 = (() => {
             const t = new Uint32Array(256);
@@ -2462,9 +2920,8 @@
     </cellXfs>
 </styleSheet>`;
 
-            // Hoja 1: Movimientos
             const filasH1 = [
-                [{ v: 'HOJA 1 - MOVIMIENTOS DE CLIENTES AGENTE BCP', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'MOVIMIENTOS DE CLIENTES AGENTE BCP', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
                 [{ v: 'N° OP', s: 1 }, { v: 'FECHA', s: 1 }, { v: 'HORA', s: 1 }, { v: 'NOMBRE PERSONA', s: 1 }, { v: 'DNI (8+1)', s: 1 }, { v: 'OPERACIÓN', s: 1 }, { v: 'MONTO (S/)', s: 1 }]
             ];
             for (let i = listaMovimientosHoja1.length - 1; i >= 0; i--) {
@@ -2481,9 +2938,8 @@
                 ]);
             }
 
-            // Hoja 2: Dashboard 280
             const filasH2 = [
-                [{ v: 'HOJA 2 - DASHBOARD MENSUAL META 280 OPERACIONES', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'CONTROL DIARIO META 280 OPERACIONES', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
                 [{ v: 'FECHA', s: 1 }, { v: 'TURNO MAÑANA', s: 1 }, { v: 'TURNO TARDE', s: 1 }, { v: 'OP. CLIENTES', s: 1 }, { v: 'TOTAL DÍA', s: 1 }, { v: 'META', s: 1 }, { v: 'DIFERENCIA', s: 1 }]
             ];
             listaDashboardMensual.forEach(d => {
@@ -2499,9 +2955,8 @@
                 ]);
             });
 
-            // Hoja 3: Base de Datos de Personas
             const filasH3 = [
-                [{ v: 'HOJA 3 - BASE DE DATOS DE PERSONAS', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
+                [{ v: 'BASE DE DATOS DE PERSONAS', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }, { v: '', s: 1 }],
                 [{ v: 'NOMBRE', s: 1 }, { v: 'DNI (8 + VERIFICADOR)', s: 1 }, { v: 'CELULAR / CUENTA', s: 1 }, { v: 'CANT. OPERACIONES', s: 1 }]
             ];
             baseDatosPersonas.forEach(p => {
@@ -2537,9 +2992,9 @@
             const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
     <sheets>
-        <sheet name="Hoja 1 - Movimientos" sheetId="1" r:id="rId1"/>
-        <sheet name="Hoja 2 - Dashboard 280" sheetId="2" r:id="rId2"/>
-        <sheet name="Hoja 3 - Base de Datos" sheetId="3" r:id="rId3"/>
+        <sheet name="MOVIMIENTOS_CLIENTES" sheetId="1" r:id="rId1"/>
+        <sheet name="CONTROL_DIARIO_280" sheetId="2" r:id="rId2"/>
+        <sheet name="BASE_DATOS_PERSONAS" sheetId="3" r:id="rId3"/>
     </sheets>
 </workbook>`;
 
@@ -2637,14 +3092,14 @@
             if (contextoPrincipal === 'caja') {
                 guardarValoresModoActual();
                 contextoPrincipal = 'cierre';
-                localStorage.setItem('bcp_contexto_activo_v3', 'cierre');
+                localStorage.setItem('bcp_contexto_activo_v4', 'cierre');
                 actualizarAparienciaGoogleSwitcher();
                 calcularCuadreMeta280();
                 switchMainApp('app-cierre');
                 enfocarSiguienteInputVisible('app-cierre');
             } else {
                 contextoPrincipal = 'caja';
-                localStorage.setItem('bcp_contexto_activo_v3', 'caja');
+                localStorage.setItem('bcp_contexto_activo_v4', 'caja');
                 actualizarAparienciaGoogleSwitcher();
                 switchMainApp('app-caja');
                 enfocarSiguienteInputVisible('app-caja');
@@ -2709,10 +3164,12 @@
             vibrarRapido([20, 30, 20]);
             if (hojaActivaActual === 1) {
                 listaMovimientosHoja1 = [];
+                actualizarVistasYControl280();
+                programarSincronizacionCloud(true);
             } else if (hojaActivaActual === 2) {
-                listaDashboardMensual = [];
+                modoVistaGauge = (modoVistaGauge === 'hoy') ? 'mes' : 'hoy';
+                renderizarHoja2DashboardMes();
             }
-            actualizarVistasYControl280();
         }
 
         function ejecutarBotonBorrarCaja() {
@@ -2739,9 +3196,10 @@
                 const elim = listaMovimientosHoja1.pop();
                 recalcularCorrelativosMovimientos();
                 actualizarVistasYControl280();
+                programarSincronizacionCloud(true);
                 btn.classList.add('confirmado');
                 lbl.innerText = 'ANULADO';
-                badge.innerText = `↩️ ANULADA OP #${elim.numOp} (${elim.personaNombre})`;
+                badge.innerText = `↩️ ANULADA OP #${elim.numOp} (${elim.personaNombre}) EN SHEETS`;
             } else {
                 btn.classList.add('confirmado');
                 lbl.innerText = 'VACÍO';
@@ -2807,14 +3265,14 @@
 
                 const topDef = Math.min(altoPantallaSinTeclado - 48, Math.round(rect.bottom + 7));
 
-                b1.style.left = localStorage.getItem('bcp_btn_borrar_x_v3') || Math.round(rect.left) + 'px';
-                b1.style.top  = localStorage.getItem('bcp_btn_borrar_y_v3') || topDef + 'px';
+                b1.style.left = localStorage.getItem('bcp_btn_borrar_x_v4') || Math.round(rect.left) + 'px';
+                b1.style.top  = localStorage.getItem('bcp_btn_borrar_y_v4') || topDef + 'px';
 
-                b2.style.left = localStorage.getItem('bcp_btn_movs_x_v3') || Math.round(rect.left + wUnit + 5) + 'px';
-                b2.style.top  = localStorage.getItem('bcp_btn_movs_y_v3') || topDef + 'px';
+                b2.style.left = localStorage.getItem('bcp_btn_movs_x_v4') || Math.round(rect.left + wUnit + 5) + 'px';
+                b2.style.top  = localStorage.getItem('bcp_btn_movs_y_v4') || topDef + 'px';
 
-                b3.style.left = localStorage.getItem('bcp_btn_anular_x_v3') || Math.round(rect.left + (wUnit + 5) * 2) + 'px';
-                b3.style.top  = localStorage.getItem('bcp_btn_anular_y_v3') || topDef + 'px';
+                b3.style.left = localStorage.getItem('bcp_btn_anular_x_v4') || Math.round(rect.left + (wUnit + 5) * 2) + 'px';
+                b3.style.top  = localStorage.getItem('bcp_btn_anular_y_v4') || topDef + 'px';
             }
         }
 
@@ -2882,8 +3340,8 @@
 
         function inicializarGoogleSwitcher() {
             const btn = document.getElementById('btnGoogleSwitcher');
-            let sx = parseFloat(localStorage.getItem('bcp_sw_x_v3')) || Math.round(window.innerWidth / 2);
-            let sy = parseFloat(localStorage.getItem('bcp_sw_y_v3')) || Math.min(altoPantallaSinTeclado - 28, 515);
+            let sx = parseFloat(localStorage.getItem('bcp_sw_x_v4')) || Math.round(window.innerWidth / 2);
+            let sy = parseFloat(localStorage.getItem('bcp_sw_y_v4')) || Math.min(altoPantallaSinTeclado - 28, 515);
             btn.style.left = sx + 'px';
             btn.style.top = sy + 'px';
 
@@ -2909,16 +3367,16 @@
                 if (!btn.hasPointerCapture(e.pointerId)) return;
                 btn.releasePointerCapture(e.pointerId);
                 if (movio) {
-                    localStorage.setItem('bcp_sw_x_v3', btn.style.left);
-                    localStorage.setItem('bcp_sw_y_v3', btn.style.top);
+                    localStorage.setItem('bcp_sw_x_v4', btn.style.left);
+                    localStorage.setItem('bcp_sw_y_v4', btn.style.top);
                 } else {
                     conmutarEntreCajaYCierre();
                 }
             });
 
-            configurarBotonEstaticoReubicable('btnCajaBorrar', 'bcp_btn_borrar_x_v3', 'bcp_btn_borrar_y_v3', ejecutarBotonBorrarCaja);
-            configurarBotonEstaticoReubicable('btnCajaMovimientos', 'bcp_btn_movs_x_v3', 'bcp_btn_movs_y_v3', () => abrirPantallaHojas(1));
-            configurarBotonEstaticoReubicable('btnCajaAnular', 'bcp_btn_anular_x_v3', 'bcp_btn_anular_y_v3', ejecutarBotonAnularUltimaOperacion);
+            configurarBotonEstaticoReubicable('btnCajaBorrar', 'bcp_btn_borrar_x_v4', 'bcp_btn_borrar_y_v4', ejecutarBotonBorrarCaja);
+            configurarBotonEstaticoReubicable('btnCajaMovimientos', 'bcp_btn_movs_x_v4', 'bcp_btn_movs_y_v4', () => abrirPantallaHojas(1));
+            configurarBotonEstaticoReubicable('btnCajaAnular', 'bcp_btn_anular_x_v4', 'bcp_btn_anular_y_v4', ejecutarBotonAnularUltimaOperacion);
 
             if (window.visualViewport) window.visualViewport.addEventListener('resize', verificarSiTecladoTapaElementosFijos);
             window.addEventListener('resize', () => {
@@ -2928,7 +3386,7 @@
         }
 
         /* ===============================================================
-           INICIALIZACIÓN GENERAL
+           INICIALIZACIÓN GENERAL Y CONEXIÓN AUTOMÁTICA A GOOGLE SHEETS
            =============================================================== */
         cargarDatosLocales();
         renderizarSelectorPersonas();
@@ -2951,6 +3409,7 @@
                 enfocarSiguienteInputVisible('app-caja');
             }
             verificarSiTecladoTapaElementosFijos();
+            descargarEstadoInicialDesdeSheets();
         };
     </script>
 </body>
