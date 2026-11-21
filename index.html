@@ -1378,13 +1378,17 @@
               <button type="button" class="btn-sec-inv" style="height:40px; padding:0 10px;" onclick="toggleApiKeyVisibility()" title="Mostrar u ocultar">👁️</button>
             </div>
           </div>
-          <div class="field-grp">
-            <label>Modelo de Visión (Nivel Gratuito)</label>
-            <select id="sel-gemini-model" class="m-select" onchange="saveAiConfig(true)">
-              <option value="gemini-2.5-flash">gemini-2.5-flash (Recomendado · Alta precisión)</option>
-              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Más rápido · Mayor cuota)</option>
-              <option value="gemini-2.0-flash">gemini-2.0-flash (Alternativo estable)</option>
-            </select>
+         <div class="field-grp">
+            <label>Modelo de Visión (Google AI Studio)</label>
+            <div style="display:flex; gap:6px;">
+              <select id="sel-gemini-model" class="m-select" style="flex:1; font-size:13px;" onchange="saveAiConfig(true)">
+                <option value="gemini-flash-latest">gemini-flash-latest (Último Flash automático)</option>
+                <option value="gemini-pro-latest">gemini-pro-latest (Último Pro automático)</option>
+                <option value="gemini-2.5-flash">gemini-2.5-flash (Estable)</option>
+              </select>
+              <button type="button" class="btn-sec-inv" style="height:40px; padding:0 10px; white-space:nowrap;" onclick="fetchAvailableGeminiModels()" title="Detectar modelos de tu cuenta">🔄 Detectar</button>
+            </div>
+            <div id="ai-models-hint" style="font-size:10px; color:var(--muted); margin-top:3px;">Pega tu API Key y pulsa <b>🔄 Detectar</b> para cargar tus modelos más recientes (Gemini 4 / Flash Latest).</div>
           </div>
           <div class="form-grid-2" style="margin-bottom:6px;">
             <button type="button" class="btn-block purple" style="margin-bottom:0;" onclick="saveAiConfig(false)">💾 Guardar Clave</button>
@@ -3073,7 +3077,89 @@ function saveAiConfig(silent = false) {
     showToast(key ? '✓ Clave API de Google AI Studio guardada en tu celular' : 'Clave API borrada');
   }
 }
+const AI_MODELS_CACHE_KEY = 'ORION_V88_GEMINI_MODELS_V1';
 
+function populateModelSelect() {
+  const sel = document.getElementById('sel-gemini-model');
+  if (!sel) return;
+  const cfg = getAiConfig();
+  let cached = [];
+  try { cached = JSON.parse(localStorage.getItem(AI_MODELS_CACHE_KEY) || '[]'); } catch {}
+
+  const defaults = [
+    { id: 'gemini-flash-latest', label: 'gemini-flash-latest (Último Flash automático)' },
+    { id: 'gemini-pro-latest', label: 'gemini-pro-latest (Último Pro automático)' },
+    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Estable)' }
+  ];
+  const list = (Array.isArray(cached) && cached.length > 0) ? cached : defaults;
+
+  sel.innerHTML = list.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.label || m.id)}</option>`).join('');
+  if (cfg.model && list.some(m => m.id === cfg.model)) {
+    sel.value = cfg.model;
+  } else if (list.length > 0) {
+    sel.value = list[0].id;
+    setAiConfig({ apiKey: cfg.apiKey, model: list[0].id });
+  }
+
+  const hint = document.getElementById('ai-models-hint');
+  if (hint && cached.length > 0) {
+    hint.innerHTML = `✓ <b>${cached.length} modelos</b> detectados en tu cuenta Google AI Studio.`;
+  }
+}
+
+async function fetchAvailableGeminiModels() {
+  const cfg = getAiConfig();
+  const inpVal = (document.getElementById('inp-gemini-apikey')?.value || '').trim();
+  const apiKey = inpVal || cfg.apiKey;
+  if (!apiKey) return showToast('Primero pega tu API Key de Google AI Studio');
+
+  setAiConfig({ apiKey, model: cfg.model });
+  showToast('Buscando modelos disponibles en tu cuenta...');
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+
+    const rawModels = Array.isArray(data.models) ? data.models : [];
+    const usable = rawModels
+      .filter(m =>
+        Array.isArray(m.supportedGenerationMethods) &&
+        m.supportedGenerationMethods.includes('generateContent') &&
+        /gemini/i.test(m.name || '') &&
+        !/(embedding|aqa|tts|audio-only|robotics|computer-use)/i.test(m.name || '')
+      )
+      .map(m => {
+        const id = String(m.name || '').replace(/^models\//, '');
+        const disp = m.displayName ? `${m.displayName} (${id})` : id;
+        return { id, label: disp };
+      })
+      .sort((a, b) => {
+        const rank = (id) => {
+          if (/gemini-4/i.test(id)) return 1;
+          if (/latest/i.test(id)) return 2;
+          if (/gemini-3\.5/i.test(id)) return 3;
+          if (/gemini-3/i.test(id)) return 4;
+          if (/gemini-2\.5/i.test(id)) return 5;
+          return 9;
+        };
+        const diff = rank(a.id) - rank(b.id);
+        return diff !== 0 ? diff : a.id.localeCompare(b.id);
+      });
+
+    if (usable.length === 0) throw new Error('No se encontraron modelos Gemini compatibles');
+
+    localStorage.setItem(AI_MODELS_CACHE_KEY, JSON.stringify(usable));
+    populateModelSelect();
+    playScanBeep(true);
+    vibrate([15, 25, 15]);
+    showToast(`✓ ${usable.length} modelos actualizados cargados`);
+  } catch (err) {
+    playScanBeep(false);
+    showToast('Error detectando modelos: ' + (err.message || 'Verifica tu clave'));
+  }
+}
 async function testGeminiConnection() {
   const cfg = getAiConfig();
   const inpVal = (document.getElementById('inp-gemini-apikey')?.value || '').trim();
@@ -4542,7 +4628,7 @@ function renderDatosView() {
   const stPill = document.getElementById('ai-key-status');
 
   if (keyInp && document.activeElement !== keyInp) keyInp.value = cfg.apiKey;
-  if (modSel) modSel.value = cfg.model;
+ populateModelSelect();
   if (stPill) {
     stPill.textContent = cfg.apiKey ? '✓ Activa' : 'Sin clave';
     stPill.classList.toggle('ready', Boolean(cfg.apiKey));
